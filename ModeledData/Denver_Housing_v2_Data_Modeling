@@ -1,0 +1,144 @@
+
+
+#######################################
+#
+#
+# Try modeling data, starting with intuitive model
+#
+#
+
+library(corrplot)
+library(foreign)
+library(glmnet)
+library(broom)
+
+# Create a training/test split of 70% train, 30% test
+
+set.seed(1234)
+ind <-sample(2,nrow(ACSData9), replace=TRUE, prob=c(0.7, 0.3))
+ACSData9.training <-ACSData9[ind==1,]
+ACSData9.test <-ACSData9[ind==2,]
+
+# Test models using OLS regression
+
+model1 <- lm(HouseValue_Median ~ 
+                  Occ_HousingUnits_HHInc12Mos_Owner_Perc_25KandBelow +
+                  Occ_HousingUnits_HHInc12Mos_Owner_Perc_75KandAbove +
+                  HHs_Perc_MarriedCoupleFamilyOnly +
+                  SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_MedianIncome +
+                  SCs_TotalPop_25YrsPlus_EducationLevel_Perc_AtLeastBADegree +
+                  SCs_TotalPop_Perc_Upto150PercentPovertyLevel +
+                  House_MedianYearBuilt +
+                  HousingUnits_Perc_Vacant +
+                  TvRO_Perc_Renter +
+                  WS_Past12Mos_16to64_MeanUsualHrsWorked +
+                  Last_School_Year_Ranking,
+                  data = ACSData9.training)
+summary(model1)
+
+# make predictions and summarize accuracy
+predictions <- predict(model1, ACSData9.training)
+str(predictions)
+ 
+
+model1.res = resid(model1)
+summary(model1)
+AIC(model1)
+BIC(model1)
+summary(model1.res)
+
+opar <- par(mfrow = c(2,2), oma = c(0, 0, 1.1, 0))
+plot(model1, las = 1)
+
+# Dropping percent owners below $25K and last year's school district ranking
+
+model2 <- lm(HouseValue_Median ~ Occ_HousingUnits_HHInc12Mos_Owner_Perc_75KandAbove +
+                                    HHs_Perc_MarriedCoupleFamilyOnly +
+                  SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_MedianIncome +
+                  SCs_TotalPop_25YrsPlus_EducationLevel_Perc_AtLeastBADegree +
+                  SCs_TotalPop_Perc_Upto150PercentPovertyLevel +
+                  House_MedianYearBuilt +
+                  HousingUnits_Perc_Vacant +
+                  TvRO_Perc_Renter +
+                  WS_Past12Mos_16to64_MeanUsualHrsWorked,
+                  data = ACSData9.training)
+
+summary(model2)
+AIC(model2)
+BIC(model2)
+
+opar <- par(mfrow = c(2,2), oma = c(0, 0, 1.1, 0))
+plot(model2, las = 1)
+
+# Also dropping median house year
+
+model3 <- lm(HouseValue_Median ~ 
+                  Occ_HousingUnits_HHInc12Mos_Owner_Perc_75KandAbove +
+                  HHs_Perc_MarriedCoupleFamilyOnly +
+                  SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_MedianIncome +
+                  SCs_TotalPop_25YrsPlus_EducationLevel_Perc_AtLeastBADegree +
+                  SCs_TotalPop_Perc_Upto150PercentPovertyLevel +
+                  HousingUnits_Perc_Vacant +
+                  TvRO_Perc_Renter +
+                  WS_Past12Mos_16to64_MeanUsualHrsWorked,
+                  data = ACSData9.training)
+
+summary(model3)
+AIC(model3)
+BIC(model3)
+
+opar <- par(mfrow = c(2,2), oma = c(0, 0, 1.1, 0))
+plot(model3, las = 1)
+
+#########################
+#
+#
+# Create smaller dataset to check for collinearity between variables
+
+
+ACSData11 <-select(ACSData9,
+                   c['HouseValue_Median',
+                   'Occ_HousingUnits_HHInc12Mos_Owner_Perc_25KandBelow',
+                   'Occ_HousingUnits_HHInc12Mos_Owner_Perc_75KandAbove',
+                   'HHs_Perc_MarriedCoupleFamilyOnly',
+                   'SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_MedianIncome',
+                   'SCs_TotalPop_25YrsPlus_EducationLevel_Perc_AtLeastBADegree',
+                   'SCs_TotalPop_Perc_Upto150PercentPovertyLevel',
+                   'House_MedianYearBuilt',
+                   'HousingUnits_Perc_Vacant',
+                   'TvRO_Perc_Renter',
+                   'WS_Past12Mos_16to64_MeanUsualHrsWorked',
+                   'Last_School_Year_Ranking'])
+
+############################
+#
+#
+#  Try LASSO regression to reduce multicollinearity
+
+library(glmnet)
+
+x=model.matrix(HouseValue_Median ~ 
+                  Occ_HousingUnits_HHInc12Mos_Owner_Perc_25KandBelow +
+                  Occ_HousingUnits_HHInc12Mos_Owner_Perc_75KandAbove +
+                  HHs_Perc_MarriedCoupleFamilyOnly +
+                  SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_MedianIncome +
+                  SCs_TotalPop_25YrsPlus_EducationLevel_Perc_AtLeastBADegree +
+                  SCs_TotalPop_Perc_Upto150PercentPovertyLevel +
+                  House_MedianYearBuilt +
+                  HousingUnits_Perc_Vacant +
+                  TvRO_Perc_Renter +
+                  WS_Past12Mos_16to64_MeanUsualHrsWorked +
+                  Last_School_Year_Ranking,
+                  data = ACSData9.training)
+y=ACSData9.training$HouseValue_Median
+fit.lasso=glmnet(x,y,alpha=1)
+plot(fit.lasso,xvar="lambda",label=TRUE)
+cv.lasso=cv.glmnet(x,y)
+plot(cv.lasso)
+coef(cv.lasso)
+summarise(ACSData9.training)
+summarise(ACSData9)
+
+library('lars')
+library(MASS)
+
