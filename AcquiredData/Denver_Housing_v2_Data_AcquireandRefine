@@ -1,0 +1,461 @@
+
+
+
+####################
+#
+#
+#  Denver Housing Values project
+#  John Francis Ryan
+#
+#
+######################
+
+
+#
+#
+#  Acquire 
+
+
+
+library(plyr)
+library(dplyr)
+
+
+setwd('C:/Users/John/Denver_Housing_Project/ACS_Data/Final_Data')
+
+# Read data
+
+# Dependent variable: median house value
+Median_Value_ACS_13_DHP<-read.csv('ACS_13_5YR_B25077_DHP.csv', stringsAsFactors = FALSE)
+Median_Value_ACS_13_DHP <-select(Median_Value_ACS_13_DHP, GEO.id, GEO.id2, GEO.display.label,
+                                 HD01_VD01) %>%
+  rename(id=GEO.id, id2=GEO.id2, Geography=GEO.display.label,
+                                 HouseValue_Median=HD01_VD01)
+Median_Value_ACS_13_DHP <- mutate(Median_Value_ACS_13_DHP, id=as.character(id),
+                                  id2=as.character(id2),
+                                  Geography=as.character(Geography),
+                                  HouseValue_Median = as.numeric(HouseValue_Median))
+str(Median_Value_ACS_13_DHP)
+
+
+# Age and sex variables
+Age_Sex_ACS_13_DHP<-read.csv('ACS_13_5YR_S0101_DHP.csv',  stringsAsFactors = FALSE)
+Age_Sex_ACS_13_DHP <-select(Age_Sex_ACS_13_DHP, GEO.id, 
+                            GEO.id2, GEO.display.label,
+                            HC01_EST_VC01, HC01_EST_VC07, HC01_EST_VC08,
+                            HC01_EST_VC09, HC01_EST_VC10, HC01_EST_VC11,
+                            HC01_EST_VC12, HC01_EST_VC13, HC01_EST_VC14,
+                            HC01_EST_VC15, HC01_EST_VC16, HC01_EST_VC28, 
+                            HC01_EST_VC31, HC01_EST_VC35, HC02_EST_VC35, 
+                            HC03_EST_VC35, HC01_EST_VC38, HC01_EST_VC39) %>%
+  rename(id=GEO.id, id2=GEO.id2, Geography=GEO.display.label,
+              Tot_Pop=HC01_EST_VC01,
+              Tot_Pop_Yrs_Perc_20to24=HC01_EST_VC07,
+              Tot_Pop_Yrs_Perc_25to29=HC01_EST_VC08,
+              Tot_Pop_Yrs_Perc_30to34=HC01_EST_VC09,
+              Tot_Pop_Yrs_Perc_35to39=HC01_EST_VC10,
+              Tot_Pop_Yrs_Perc_40to44=HC01_EST_VC11,
+              Tot_Pop_Yrs_Perc_45to49=HC01_EST_VC12,
+              Tot_Pop_Yrs_Perc_50to54=HC01_EST_VC13,
+              Tot_Pop_Yrs_Perc_55to59=HC01_EST_VC14,
+              Tot_Pop_Yrs_Perc_60to64=HC01_EST_VC15,
+              Tot_Pop_Yrs_Perc_65to69=HC01_EST_VC16,
+              Tot_Pop_Yrs_Perc_18Plus=HC01_EST_VC28,
+              Tot_Pop_Yrs_Perc_65Plus=HC01_EST_VC31,
+              Tot_Pop_MedianAge=HC01_EST_VC35,
+              Tot_Pop_MedianAge_Male=HC02_EST_VC35,
+              Tot_Pop_MedianAge_Female=HC03_EST_VC35,
+              Tot_Pop_OldAgeDependencyRatio=HC01_EST_VC38,
+              Tot_Pop_ChildDependencyRatio=HC01_EST_VC39)
+
+Age_Sex_ACS_13_DHP <- mutate(Age_Sex_ACS_13_DHP, id=as.character(id),
+                          id2=as.character(id2),
+                          Geography=as.character(Geography),
+                          Tot_Pop=as.numeric(Tot_Pop),
+                          Tot_Pop_Yrs_Perc_20to24=as.numeric(Tot_Pop_Yrs_Perc_20to24),
+                          Tot_Pop_Yrs_Perc_25to29=as.numeric(Tot_Pop_Yrs_Perc_25to29),
+                          Tot_Pop_Yrs_Perc_30to34=as.numeric(Tot_Pop_Yrs_Perc_30to34),
+                          Tot_Pop_Yrs_Perc_35to39=as.numeric(Tot_Pop_Yrs_Perc_35to39),
+                          Tot_Pop_Yrs_Perc_40to44=as.numeric(Tot_Pop_Yrs_Perc_40to44),
+                          Tot_Pop_Yrs_Perc_45to49=as.numeric(Tot_Pop_Yrs_Perc_45to49),
+                          Tot_Pop_Yrs_Perc_50to54=as.numeric(Tot_Pop_Yrs_Perc_50to54),
+                          Tot_Pop_Yrs_Perc_55to59=as.numeric(Tot_Pop_Yrs_Perc_55to59),
+                          Tot_Pop_Yrs_Perc_60to64=as.numeric(Tot_Pop_Yrs_Perc_60to64),
+                          Tot_Pop_Yrs_Perc_65to69=as.numeric(Tot_Pop_Yrs_Perc_65to69),
+                          Tot_Pop_Yrs_Perc_18Plus=as.numeric(Tot_Pop_Yrs_Perc_18Plus),
+                          Tot_Pop_Yrs_Perc_65Plus=as.numeric(Tot_Pop_Yrs_Perc_65Plus),
+                          Tot_Pop_MedianAge=as.numeric(Tot_Pop_MedianAge),
+                          Tot_Pop_MedianAge_Male=as.numeric(Tot_Pop_MedianAge_Male),
+                          Tot_Pop_MedianAge_Female=as.numeric(Tot_Pop_MedianAge_Female),
+                          Tot_Pop_OldAgeDependencyRatio=as.numeric(Tot_Pop_OldAgeDependencyRatio),
+                          Tot_Pop_ChildDependencyRatio=as.numeric(Tot_Pop_ChildDependencyRatio))
+
+Age_Sex_ACS_13_DHP$Tot_Pop_Perc_Under18 <- 100 - (Age_Sex_ACS_13_DHP$Tot_Pop_Yrs_Perc_18Plus)
+Age_Sex_ACS_13_DHP$Tot_Pop_Perc_20to29 <- (Age_Sex_ACS_13_DHP$Tot_Pop_Yrs_Perc_20to24 + Age_Sex_ACS_13_DHP$Tot_Pop_Yrs_Perc_25to29)
+Age_Sex_ACS_13_DHP$Tot_Pop_Perc_30to39 <- (Age_Sex_ACS_13_DHP$Tot_Pop_Yrs_Perc_30to34 + Age_Sex_ACS_13_DHP$Tot_Pop_Yrs_Perc_35to39)
+Age_Sex_ACS_13_DHP$Tot_Pop_Perc_40to49 <- (Age_Sex_ACS_13_DHP$Tot_Pop_Yrs_Perc_40to44 + Age_Sex_ACS_13_DHP$Tot_Pop_Yrs_Perc_45to49)
+Age_Sex_ACS_13_DHP$Tot_Pop_Perc_50to59 <- (Age_Sex_ACS_13_DHP$Tot_Pop_Yrs_Perc_50to54 + Age_Sex_ACS_13_DHP$Tot_Pop_Yrs_Perc_55to59)
+Age_Sex_ACS_13_DHP$Tot_Pop_Perc_60to69 <- (Age_Sex_ACS_13_DHP$Tot_Pop_Yrs_Perc_60to64 + Age_Sex_ACS_13_DHP$Tot_Pop_Yrs_Perc_65to69)
+
+str(Age_Sex_ACS_13_DHP)
+
+
+# Financials - S2503
+Financial_Chars_ACS_13_DHP<-read.csv('ACS_13_5YR_S2503_DHP2.csv',  stringsAsFactors = FALSE)
+Financial_Chars_ACS_13_DHP <-select(Financial_Chars_ACS_13_DHP, GEO.id, 
+                            GEO.id2, GEO.display.label,
+                            HC01_EST_VC01, HC02_EST_VC01, HC01_EST_VC03,
+                            HC02_EST_VC03, HC01_EST_VC04, HC02_EST_VC04,
+                            HC01_EST_VC05, HC02_EST_VC05, HC01_EST_VC06,
+                            HC02_EST_VC06, HC01_EST_VC07, HC02_EST_VC07,
+                            HC01_EST_VC08, HC02_EST_VC08, HC01_EST_VC09,
+                            HC02_EST_VC09, HC01_EST_VC10, HC02_EST_VC10,
+                            HC01_EST_VC11, HC02_EST_VC11, HC01_EST_VC12,
+                            HC02_EST_VC12, HC01_EST_VC13, HC02_EST_VC13) %>%
+  rename(id=GEO.id, id2=GEO.id2, Geography=GEO.display.label,
+          Occ_HousingUnits=HC01_EST_VC01,
+          Occ_HousingUnits_Owner=HC02_EST_VC01,
+          Occ_HousingUnits_HHInc12Mos_Under5K=HC01_EST_VC03,
+          Occ_HousingUnits_HHInc12Mos_Under5K_Owner=HC02_EST_VC03,
+          Occ_HousingUnits_HHInc12Mos_5to9K=HC01_EST_VC04,
+          Occ_HousingUnits_HHInc12Mos_5to9K_Owner=HC02_EST_VC04,
+          Occ_HousingUnits_HHInc12Mos_10to14K=HC01_EST_VC05,
+          Occ_HousingUnits_HHInc12Mos_10to14K_Owner=HC02_EST_VC05,
+          Occ_HousingUnits_HHInc12Mos_15to20K=HC01_EST_VC06,
+          Occ_HousingUnits_HHInc12Mos_15to20K_Owner=HC02_EST_VC06,
+          Occ_HousingUnits_HHInc12Mos_20to25K=HC01_EST_VC07,
+          Occ_HousingUnits_HHInc12Mos_20to25K_Owner=HC02_EST_VC07,
+          Occ_HousingUnits_HHInc12Mos_25to35K=HC01_EST_VC08,
+          Occ_HousingUnits_HHInc12Mos_25to35K_Owner=HC02_EST_VC08,
+          Occ_HousingUnits_HHInc12Mos_35to50K=HC01_EST_VC09,
+          Occ_HousingUnits_HHInc12Mos_35to50K_Owner=HC02_EST_VC09,
+          Occ_HousingUnits_HHInc12Mos_50to75K=HC01_EST_VC10,
+          Occ_HousingUnits_HHInc12Mos_50to75K_Owner=HC02_EST_VC10,
+          Occ_HousingUnits_HHInc12Mos_75to100K=HC01_EST_VC11,
+          Occ_HousingUnits_HHInc12Mos_75to100K_Owner=HC02_EST_VC11,
+          Occ_HousingUnits_HHInc12Mos_100to150K=HC01_EST_VC12,
+          Occ_HousingUnits_HHInc12Mos_100to150K_Owner=HC02_EST_VC12,
+          Occ_HousingUnits_HHInc12Mos_150KPlus=HC01_EST_VC13,
+          Occ_HousingUnits_HHInc12Mos_150KPlus_Owner=HC02_EST_VC13)
+
+
+Financial_Chars_ACS_13_DHP <- mutate(Financial_Chars_ACS_13_DHP, 
+                                     id=as.character(id),
+                          id2=as.character(id2),
+                          Geography=as.character(Geography),
+                          Occ_HousingUnits=as.numeric(Occ_HousingUnits),
+                          Occ_HousingUnits_Owner=as.numeric(Occ_HousingUnits_Owner),
+                          Occ_HousingUnits_HHInc12Mos_Under5K=as.numeric(Occ_HousingUnits_HHInc12Mos_Under5K),
+                          Occ_HousingUnits_HHInc12Mos_Under5K_Owner=as.numeric(Occ_HousingUnits_HHInc12Mos_Under5K_Owner),
+                          Occ_HousingUnits_HHInc12Mos_5to9K=as.numeric(Occ_HousingUnits_HHInc12Mos_5to9K),
+                          Occ_HousingUnits_HHInc12Mos_5to9K_Owner=as.numeric(Occ_HousingUnits_HHInc12Mos_5to9K_Owner),
+                          Occ_HousingUnits_HHInc12Mos_10to14K=as.numeric(Occ_HousingUnits_HHInc12Mos_10to14K),
+                          Occ_HousingUnits_HHInc12Mos_10to14K_Owner=as.numeric(Occ_HousingUnits_HHInc12Mos_10to14K_Owner),
+                          Occ_HousingUnits_HHInc12Mos_15to20K=as.numeric(Occ_HousingUnits_HHInc12Mos_15to20K),
+                          Occ_HousingUnits_HHInc12Mos_15to20K_Owner=as.numeric(Occ_HousingUnits_HHInc12Mos_15to20K_Owner),
+                          Occ_HousingUnits_HHInc12Mos_20to25K=as.numeric(Occ_HousingUnits_HHInc12Mos_20to25K),
+                          Occ_HousingUnits_HHInc12Mos_20to25K_Owner=as.numeric(Occ_HousingUnits_HHInc12Mos_20to25K_Owner),
+                          Occ_HousingUnits_HHInc12Mos_25to35K=as.numeric(Occ_HousingUnits_HHInc12Mos_25to35K),
+                          Occ_HousingUnits_HHInc12Mos_25to35K_Owner=as.numeric(Occ_HousingUnits_HHInc12Mos_25to35K_Owner),
+                          Occ_HousingUnits_HHInc12Mos_35to50K=as.numeric(Occ_HousingUnits_HHInc12Mos_35to50K),
+                          Occ_HousingUnits_HHInc12Mos_35to50K_Owner=as.numeric(Occ_HousingUnits_HHInc12Mos_35to50K_Owner),
+                          Occ_HousingUnits_HHInc12Mos_50to75K=as.numeric(Occ_HousingUnits_HHInc12Mos_50to75K),
+                          Occ_HousingUnits_HHInc12Mos_50to75K_Owner=as.numeric(Occ_HousingUnits_HHInc12Mos_50to75K_Owner),
+                          Occ_HousingUnits_HHInc12Mos_75to100K=as.numeric(Occ_HousingUnits_HHInc12Mos_75to100K),
+                          Occ_HousingUnits_HHInc12Mos_75to100K_Owner=as.numeric(Occ_HousingUnits_HHInc12Mos_75to100K_Owner),
+                          Occ_HousingUnits_HHInc12Mos_100to150K=as.numeric(Occ_HousingUnits_HHInc12Mos_100to150K),
+                          Occ_HousingUnits_HHInc12Mos_100to150K_Owner=as.numeric(Occ_HousingUnits_HHInc12Mos_100to150K_Owner),
+                          Occ_HousingUnits_HHInc12Mos_150KPlus=as.numeric(Occ_HousingUnits_HHInc12Mos_150KPlus),
+                          Occ_HousingUnits_HHInc12Mos_150KPlus_Owner=as.numeric(Occ_HousingUnits_HHInc12Mos_150KPlus_Owner))
+
+
+Financial_Chars_ACS_13_DHP$Occ_HousingUnits_HHInc12Mos_Perc_25KandBelow <- (Financial_Chars_ACS_13_DHP$Occ_HousingUnits_HHInc12Mos_Under5K + Financial_Chars_ACS_13_DHP$Occ_HousingUnits_HHInc12Mos_5to9K+Financial_Chars_ACS_13_DHP$Occ_HousingUnits_HHInc12Mos_10to14K + Financial_Chars_ACS_13_DHP$Occ_HousingUnits_HHInc12Mos_15to20K + Financial_Chars_ACS_13_DHP$Occ_HousingUnits_HHInc12Mos_20to25K)
+
+Financial_Chars_ACS_13_DHP$Occ_HousingUnits_HHInc12Mos_Owner_Perc_25KandBelow <- (Financial_Chars_ACS_13_DHP$Occ_HousingUnits_HHInc12Mos_Under5K_Owner + Financial_Chars_ACS_13_DHP$Occ_HousingUnits_HHInc12Mos_5to9K_Owner+Financial_Chars_ACS_13_DHP$Occ_HousingUnits_HHInc12Mos_10to14K_Owner + Financial_Chars_ACS_13_DHP$Occ_HousingUnits_HHInc12Mos_15to20K_Owner + Financial_Chars_ACS_13_DHP$Occ_HousingUnits_HHInc12Mos_20to25K_Owner)
+
+
+Financial_Chars_ACS_13_DHP$Occ_HousingUnits_HHInc12Mos_Perc_25Kto75K<-(Financial_Chars_ACS_13_DHP$Occ_HousingUnits_HHInc12Mos_25to35K + Financial_Chars_ACS_13_DHP$Occ_HousingUnits_HHInc12Mos_35to50K + Financial_Chars_ACS_13_DHP$Occ_HousingUnits_HHInc12Mos_50to75K)
+
+Financial_Chars_ACS_13_DHP$Occ_HousingUnits_HHInc12Mos_Owner_Perc_25Kto75K<-(Financial_Chars_ACS_13_DHP$Occ_HousingUnits_HHInc12Mos_25to35K_Owner + Financial_Chars_ACS_13_DHP$Occ_HousingUnits_HHInc12Mos_35to50K_Owner + Financial_Chars_ACS_13_DHP$Occ_HousingUnits_HHInc12Mos_50to75K_Owner)
+
+Financial_Chars_ACS_13_DHP$Occ_HousingUnits_HHInc12Mos_Perc_75KandAbove <-(Financial_Chars_ACS_13_DHP$Occ_HousingUnits_HHInc12Mos_75to100K + Financial_Chars_ACS_13_DHP$Occ_HousingUnits_HHInc12Mos_100to150K + Financial_Chars_ACS_13_DHP$Occ_HousingUnits_HHInc12Mos_150KPlus)
+
+Financial_Chars_ACS_13_DHP$Occ_HousingUnits_HHInc12Mos_Owner_Perc_75KandAbove <-(Financial_Chars_ACS_13_DHP$Occ_HousingUnits_HHInc12Mos_75to100K_Owner + Financial_Chars_ACS_13_DHP$Occ_HousingUnits_HHInc12Mos_100to150K_Owner + Financial_Chars_ACS_13_DHP$Occ_HousingUnits_HHInc12Mos_150KPlus_Owner)
+
+
+str(Financial_Chars_ACS_13_DHP)
+
+
+# Percent married couple family households
+Households_and_Families_ACS_13_DHP<-read.csv('ACS_13_5YR_S1101_DHP.csv', stringsAsFactors = FALSE)
+Households_and_Families_ACS_13_DHP <-select(Households_and_Families_ACS_13_DHP,
+                                            GEO.id, GEO.id2, GEO.display.label,
+                                HC01_EST_VC02, HC02_EST_VC02, HC05_EST_VC02,
+                                HC01_EST_VC03, HC02_EST_VC03, HC05_EST_VC03,
+                                HC01_EST_VC06, HC02_EST_VC06, HC05_EST_VC06,
+                                HC01_EST_VC07, HC02_EST_VC07, HC05_EST_VC07,
+                                HC01_EST_VC15, HC02_EST_VC15, HC05_EST_VC15,
+                                HC01_EST_VC27, HC02_EST_VC27, HC05_EST_VC27,
+                                HC01_EST_VC28, HC02_EST_VC28, HC05_EST_VC28,
+                                HC01_EST_VC29, HC02_EST_VC29, HC05_EST_VC29) %>%
+  rename(id=GEO.id, id2=GEO.id2, Geography=GEO.display.label,
+          TotalHHs=HC01_EST_VC02,
+          TotalHHs_MarriedCoupleFamily=HC02_EST_VC02,
+          TotalHHs_Nonfamily=HC05_EST_VC02,
+          HHs_AvgSize=HC01_EST_VC03,
+          HHs_AvgSize_MarriedCoupleFamily=HC02_EST_VC03,
+          HHs_AvgSize_Nonfamily=HC05_EST_VC03,
+          HHs_TotalFamilies=HC01_EST_VC06,
+          HHs_TotalFamilies_MarriedCoupleFamily=HC02_EST_VC06,
+          HHs_TotalFamilies_Nonfamily=HC05_EST_VC06,
+          HHs_AvgFamilySize=HC01_EST_VC07,
+          HHs_AvgFamilySize_MarriedCoupleFamily=HC02_EST_VC07,
+          HHs_AvgFamilySize_Nonfamily=HC05_EST_VC07,
+          HHs_Households_Total=HC01_EST_VC15,
+          HHs_Households_Total_MarriedCoupleFamily=HC02_EST_VC15,
+          HHs_Households_Total_Nonfamily=HC05_EST_VC15,
+          HHs_Households_Total_UnitsinStructure_OneUnitStructure=HC01_EST_VC27,
+          HHs_Households_Total_UnitsinStructure_MarriedCoupleFamily_Perc_OneUnitStructure=HC02_EST_VC27,
+          HHs_Households_Total_UnitsinStructure_Nonfamily_Perc_OneUnitStructure=HC05_EST_VC27,
+          HHs_Households_Total_UnitsinStructure_TwoPlusUnitStructure=HC01_EST_VC28,
+          HHs_Households_Total_UnitsinStructure_MarriedCoupleFamily_Perc_TwoPlusUnitStructure=HC02_EST_VC28,
+          HHs_Households_Total_UnitsinStructure_Nonfamily_Perc_TwoPlusUnitStructure=HC05_EST_VC28,
+          HHs_Households_Total_UnitsinStructure_MobileHomeandSimilar=HC01_EST_VC29,
+          HHs_Households_Total_UnitsinStructure_MarriedCoupleFamily_Perc_MobileHomeandSimilar=HC02_EST_VC29,
+          HHs_Households_Total_UnitsinStructure_Nonfamily_Perc_MobileHomeandSimilar=HC05_EST_VC29)
+
+Households_and_Families_ACS_13_DHP <- mutate(Households_and_Families_ACS_13_DHP,
+                                  id=as.character(id),
+                                  id2=as.character(id2),
+                                  Geography=as.character(Geography),
+                                  TotalHHs=as.numeric(TotalHHs),
+                                  TotalHHs_MarriedCoupleFamily=as.numeric(TotalHHs_MarriedCoupleFamily),
+                                  TotalHHs_Nonfamily=as.numeric(TotalHHs_Nonfamily),
+                                  HHs_AvgSize=as.numeric(HHs_AvgSize),
+                                  HHs_AvgSize_MarriedCoupleFamily=as.numeric(HHs_AvgSize_MarriedCoupleFamily),
+                                  HHs_AvgSize_Nonfamily=as.numeric(HHs_AvgSize_Nonfamily),
+                                  HHs_TotalFamilies=as.numeric(HHs_TotalFamilies),
+                                  HHs_TotalFamilies_MarriedCoupleFamily=as.numeric(HHs_TotalFamilies_MarriedCoupleFamily),
+                                  HHs_TotalFamilies_Nonfamily=as.numeric(HHs_TotalFamilies_Nonfamily),
+                                  HHs_AvgFamilySize=as.numeric(HHs_AvgFamilySize),
+                                  HHs_AvgFamilySize_MarriedCoupleFamily=as.numeric(HHs_AvgFamilySize_MarriedCoupleFamily),
+                                  HHs_AvgFamilySize_Nonfamily=as.numeric(HHs_AvgFamilySize_Nonfamily),
+                                  HHs_Households_Total=as.numeric(HHs_Households_Total),
+                                  HHs_Households_Total_MarriedCoupleFamily=as.numeric(HHs_Households_Total_MarriedCoupleFamily),
+                                  HHs_Households_Total_Nonfamily=as.numeric(HHs_Households_Total_Nonfamily),
+                                  HHs_Households_Total_UnitsinStructure_OneUnitStructure=as.numeric(HHs_Households_Total_UnitsinStructure_OneUnitStructure),
+                                  HHs_Households_Total_UnitsinStructure_MarriedCoupleFamily_Perc_OneUnitStructure=as.numeric(HHs_Households_Total_UnitsinStructure_MarriedCoupleFamily_Perc_OneUnitStructure),
+                                  HHs_Households_Total_UnitsinStructure_Nonfamily_Perc_OneUnitStructure=as.numeric(HHs_Households_Total_UnitsinStructure_Nonfamily_Perc_OneUnitStructure),
+                                  HHs_Households_Total_UnitsinStructure_TwoPlusUnitStructure=as.numeric(HHs_Households_Total_UnitsinStructure_TwoPlusUnitStructure),
+                                  HHs_Households_Total_UnitsinStructure_MarriedCoupleFamily_Perc_TwoPlusUnitStructure=as.numeric(HHs_Households_Total_UnitsinStructure_MarriedCoupleFamily_Perc_TwoPlusUnitStructure),
+                                  HHs_Households_Total_UnitsinStructure_Nonfamily_Perc_TwoPlusUnitStructure=as.numeric(HHs_Households_Total_UnitsinStructure_Nonfamily_Perc_TwoPlusUnitStructure),
+                                  HHs_Households_Total_UnitsinStructure_MobileHomeandSimilar=as.numeric(HHs_Households_Total_UnitsinStructure_MobileHomeandSimilar),
+                                  HHs_Households_Total_UnitsinStructure_MobileHomeandSimilar=as.numeric(HHs_Households_Total_UnitsinStructure_MobileHomeandSimilar),
+                                  HHs_Households_Total_UnitsinStructure_MarriedCoupleFamily_Perc_MobileHomeandSimilar=as.numeric(HHs_Households_Total_UnitsinStructure_MarriedCoupleFamily_Perc_MobileHomeandSimilar),
+                                  HHs_Households_Total_UnitsinStructure_Nonfamily_Perc_MobileHomeandSimilar=as.numeric(HHs_Households_Total_UnitsinStructure_Nonfamily_Perc_MobileHomeandSimilar))
+
+
+Households_and_Families_ACS_13_DHP$HHs_Perc_MarriedCoupleFamilyOnly <-(Households_and_Families_ACS_13_DHP$TotalHHs_MarriedCoupleFamily/Households_and_Families_ACS_13_DHP$TotalHHs) * 100
+
+ 
+str(Households_and_Families_ACS_13_DHP)
+
+
+# Selected characteristics
+
+Selected_Chars_ACS_13_DHP<-read.csv('ACS_13_5YR_S0601_DHP.csv',  stringsAsFactors = FALSE)
+Selected_Chars_ACS_13_DHP <-select(Selected_Chars_ACS_13_DHP, 
+                                   GEO.id, GEO.id2, GEO.display.label,
+                            HC01_EST_VC01, HC01_EST_VC12, HC01_EST_VC38,
+                            HC01_EST_VC39, HC01_EST_VC40, HC01_EST_VC41,
+                            HC01_EST_VC42, HC01_EST_VC45, HC01_EST_VC46,
+                            HC01_EST_VC47, HC01_EST_VC48, HC01_EST_VC49,
+                            HC01_EST_VC50, HC01_EST_VC53, HC01_EST_VC54,
+                            HC01_EST_VC55, HC01_EST_VC56, HC01_EST_VC57, 
+                            HC01_EST_VC58, HC01_EST_VC59, HC01_EST_VC60,
+                            HC01_EST_VC61, HC01_EST_VC63, HC01_EST_VC66,
+                            HC01_EST_VC67, HC01_EST_VC68) %>%
+  rename(id=GEO.id, id2=GEO.id2, Geography=GEO.display.label,
+          SCs_TotalPop=HC01_EST_VC01,
+          SCs_TotalPop_MedianAge=HC01_EST_VC12,
+          SCs_TotalPop_MaritalStatus_15YearsPlus=HC01_EST_VC38,
+          SCs_TotalPop_MaritalStatus_15YearsPlus_Perc_NeverMarried=HC01_EST_VC39,
+          SCs_TotalPop_MaritalStatus_15YearsPlus_Perc_NowMarriedExceptSeparated=HC01_EST_VC40, 
+          SCs_TotalPop_MaritalStatus_15YearsPlus_Perc_DivorcedorSeparated=HC01_EST_VC41,
+          SCs_TotalPop_MaritalStatus_15YearsPlus_Perc_Widowed=HC01_EST_VC42,
+          SCs_TotalPop_25YrsPlus_EducationLevel=HC01_EST_VC45,
+          SCs_TotalPop_25YrsPlus_EducationLevel_Perc_NotHSGrad=HC01_EST_VC46,
+          SCs_TotalPop_25YrsPlus_EducationLevel_Perc_HSGrad=HC01_EST_VC47,
+          SCs_TotalPop_25YrsPlus_EducationLevel_Perc_SomeCollegetoAADegree=HC01_EST_VC48,
+          SCs_TotalPop_25YrsPlus_EducationLevel_Perc_BADegree=HC01_EST_VC49,
+          SCs_TotalPop_25YrsPlus_EducationLevel_Perc_GradorProfessionalDegree=HC01_EST_VC50,
+          SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj=HC01_EST_VC53,
+          SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_1to10000orLoss=HC01_EST_VC54,
+          SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_10to15K=HC01_EST_VC55,
+          SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_15to25K=HC01_EST_VC56,
+          SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_25to35K=HC01_EST_VC57,
+          SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_35to50K=HC01_EST_VC58,
+          SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_50to65K=HC01_EST_VC59,
+          SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_65to75K=HC01_EST_VC60,
+          SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_75KPlus=HC01_EST_VC61,
+          SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_MedianIncome=HC01_EST_VC63,
+          SCs_TotalPop_15YrsPlus_PovertyStatusDetermined=HC01_EST_VC66,
+          SCs_TotalPop_15YrsPlus_PovertyStatusDetermined_Below100PercentPovertyLevel=HC01_EST_VC67,
+          SCs_TotalPop_15YrsPlus_PovertyStatusDetermined_100to150PercentPovertyLevel=HC01_EST_VC68)
+
+
+Selected_Chars_ACS_13_DHP <- mutate(Selected_Chars_ACS_13_DHP, 
+                                    id=as.character(id),
+                          id2=as.character(id2),
+                          Geography=as.character(Geography),
+                          SCs_TotalPop=as.numeric(SCs_TotalPop),
+                          SCs_TotalPop_MedianAge=as.numeric(SCs_TotalPop_MedianAge),
+                          SCs_TotalPop_MaritalStatus_15YearsPlus=as.numeric(SCs_TotalPop_MaritalStatus_15YearsPlus),
+                          SCs_TotalPop_MaritalStatus_15YearsPlus_Perc_NeverMarried=as.numeric(SCs_TotalPop_MaritalStatus_15YearsPlus_Perc_NeverMarried),
+                          SCs_TotalPop_MaritalStatus_15YearsPlus_Perc_NowMarriedExceptSeparated=as.numeric(SCs_TotalPop_MaritalStatus_15YearsPlus_Perc_NowMarriedExceptSeparated),
+                          SCs_TotalPop_MaritalStatus_15YearsPlus_Perc_DivorcedorSeparated=as.numeric(SCs_TotalPop_MaritalStatus_15YearsPlus_Perc_DivorcedorSeparated),
+                          SCs_TotalPop_MaritalStatus_15YearsPlus_Perc_Widowed=as.numeric(SCs_TotalPop_MaritalStatus_15YearsPlus_Perc_Widowed),
+                          SCs_TotalPop_25YrsPlus_EducationLevel=as.numeric(SCs_TotalPop_25YrsPlus_EducationLevel),
+                          SCs_TotalPop_25YrsPlus_EducationLevel_Perc_NotHSGrad=as.numeric(SCs_TotalPop_25YrsPlus_EducationLevel_Perc_NotHSGrad),
+                          SCs_TotalPop_25YrsPlus_EducationLevel_Perc_HSGrad=as.numeric(SCs_TotalPop_25YrsPlus_EducationLevel_Perc_HSGrad),
+                          SCs_TotalPop_25YrsPlus_EducationLevel_Perc_SomeCollegetoAADegree=as.numeric(SCs_TotalPop_25YrsPlus_EducationLevel_Perc_SomeCollegetoAADegree),
+                          SCs_TotalPop_25YrsPlus_EducationLevel_Perc_BADegree=as.numeric(SCs_TotalPop_25YrsPlus_EducationLevel_Perc_BADegree),
+                          SCs_TotalPop_25YrsPlus_EducationLevel_Perc_GradorProfessionalDegree=as.numeric(SCs_TotalPop_25YrsPlus_EducationLevel_Perc_GradorProfessionalDegree),
+                          SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj=as.numeric(SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj),
+                          SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_1to10000orLoss=as.numeric(SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_1to10000orLoss),
+                          SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_10to15K=as.numeric(SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_10to15K),
+                          SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_15to25K=as.numeric(SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_15to25K),
+                          SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_25to35K=as.numeric(SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_25to35K),
+                          SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_35to50K=as.numeric(SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_35to50K),
+                          SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_50to65K=as.numeric(SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_50to65K),
+                          SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_65to75K=as.numeric(SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_65to75K),
+                          SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_75KPlus=as.numeric(SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_75KPlus),
+                          SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_MedianIncome=as.numeric(SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_MedianIncome),
+                          SCs_TotalPop_15YrsPlus_PovertyStatusDetermined=as.numeric(SCs_TotalPop_15YrsPlus_PovertyStatusDetermined),
+                          SCs_TotalPop_15YrsPlus_PovertyStatusDetermined_Below100PercentPovertyLevel=as.numeric(SCs_TotalPop_15YrsPlus_PovertyStatusDetermined_Below100PercentPovertyLevel),
+                          SCs_TotalPop_15YrsPlus_PovertyStatusDetermined_100to150PercentPovertyLevel=as.numeric(SCs_TotalPop_15YrsPlus_PovertyStatusDetermined_100to150PercentPovertyLevel))
+
+
+Selected_Chars_ACS_13_DHP$SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_Total <-
+          Selected_Chars_ACS_13_DHP$SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_1to10000orLoss +
+          Selected_Chars_ACS_13_DHP$SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_10to15K +
+          Selected_Chars_ACS_13_DHP$SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_15to25K +
+          Selected_Chars_ACS_13_DHP$SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_25to35K +
+          Selected_Chars_ACS_13_DHP$SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_35to50K +
+          Selected_Chars_ACS_13_DHP$SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_50to65K +
+          Selected_Chars_ACS_13_DHP$SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_65to75K +
+          Selected_Chars_ACS_13_DHP$SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_75KPlus
+          
+
+Selected_Chars_ACS_13_DHP$SCs_TotalPop_25YrsPlus_EducationLevel_Perc_AtLeast_HSDegree <-Selected_Chars_ACS_13_DHP$SCs_TotalPop_25YrsPlus_EducationLevel_Perc_HSGrad + Selected_Chars_ACS_13_DHP$SCs_TotalPop_25YrsPlus_EducationLevel_Perc_SomeCollegetoAADegree + Selected_Chars_ACS_13_DHP$SCs_TotalPop_25YrsPlus_EducationLevel_Perc_BADegree + Selected_Chars_ACS_13_DHP$SCs_TotalPop_25YrsPlus_EducationLevel_Perc_GradorProfessionalDegree
+
+Selected_Chars_ACS_13_DHP$SCs_TotalPop_25YrsPlus_EducationLevel_Perc_AtLeastBADegree <- Selected_Chars_ACS_13_DHP$SCs_TotalPop_25YrsPlus_EducationLevel_Perc_BADegree + Selected_Chars_ACS_13_DHP$SCs_TotalPop_25YrsPlus_EducationLevel_Perc_GradorProfessionalDegree
+
+Selected_Chars_ACS_13_DHP$SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_Upto25K <- Selected_Chars_ACS_13_DHP$SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_1to10000orLoss + Selected_Chars_ACS_13_DHP$SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_10to15K + Selected_Chars_ACS_13_DHP$SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_15to25K
+
+Selected_Chars_ACS_13_DHP$SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_25Kto75K <- Selected_Chars_ACS_13_DHP$SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_25to35K + Selected_Chars_ACS_13_DHP$SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_35to50K + Selected_Chars_ACS_13_DHP$SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_50to65K + Selected_Chars_ACS_13_DHP$SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_65to75K
+
+Selected_Chars_ACS_13_DHP$SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_75KPlus <- Selected_Chars_ACS_13_DHP$SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj_75KPlus/Selected_Chars_ACS_13_DHP$SCs_TotalPop_15YrsPlus_IndividualIncomePast12MosInflAdj
+
+Selected_Chars_ACS_13_DHP$SCs_TotalPop_Perc_Upto150PercentPovertyLevel <-Selected_Chars_ACS_13_DHP$SCs_TotalPop_15YrsPlus_PovertyStatusDetermined_Below100PercentPovertyLevel + Selected_Chars_ACS_13_DHP$SCs_TotalPop_15YrsPlus_PovertyStatusDetermined_100to150PercentPovertyLevel
+
+
+
+str(Selected_Chars_ACS_13_DHP)
+summary(Selected_Chars_ACS_13_DHP$SCs_TotalPop_15YrsPlus_PovertyStatusDetermined_Below100PercentPovertyLevel)
+
+
+# Median year built
+Median_Year_Structure_Built_ACS_13_DHP<-read.csv('ACS_13_5YR_B25035_DHP.csv', stringsAsFactors = FALSE)
+Median_Year_Structure_Built_ACS_13_DHP <-select(Median_Year_Structure_Built_ACS_13_DHP, GEO.id, GEO.id2, GEO.display.label,
+                                                HD01_VD01) %>%
+  rename(id=GEO.id, id2=GEO.id2, Geography=GEO.display.label,
+         House_MedianYearBuilt=HD01_VD01)
+Median_Year_Structure_Built_ACS_13_DHP <- mutate(Median_Year_Structure_Built_ACS_13_DHP, id=as.character(id),
+                                             id2=as.character(id2),
+                                             Geography=as.character(Geography),
+                                             House_MedianYearBuilt=as.numeric(House_MedianYearBuilt))
+
+
+# Percent vacant
+Occupancy_Status_Housing_Units_ACS_13_DHP<-read.csv('ACS_13_5YR_B25002_DHP.csv', stringsAsFactors = FALSE, header=TRUE)
+Occupancy_Status_Housing_Units_ACS_13_DHP <-select(Occupancy_Status_Housing_Units_ACS_13_DHP, GEO.id, GEO.id2, GEO.display.label,
+                                                   HD01_VD01, HD01_VD03) %>%
+  rename(id=GEO.id, id2=GEO.id2, Geography=GEO.display.label,
+         OccupancyStatus_HousingUnits_Total=HD01_VD01,
+         OccupancyStatus_HousingUnits_Vacant=HD01_VD03)
+Occupancy_Status_Housing_Units_ACS_13_DHP <- mutate(Occupancy_Status_Housing_Units_ACS_13_DHP, id=as.character(id),
+                                             id2=as.character(id2),
+                                             Geography=as.character(Geography),
+                                             OccupancyStatus_HousingUnits_Total=as.numeric(OccupancyStatus_HousingUnits_Total),
+                                             OccupancyStatus_HousingUnits_Vacant=as.numeric(OccupancyStatus_HousingUnits_Vacant))
+
+Occupancy_Status_Housing_Units_ACS_13_DHP$HousingUnits_Perc_Vacant <- (Occupancy_Status_Housing_Units_ACS_13_DHP$OccupancyStatus_HousingUnits_Vacant/Occupancy_Status_Housing_Units_ACS_13_DHP$OccupancyStatus_HousingUnits_Total) * 100
+
+str(Occupancy_Status_Housing_Units_ACS_13_DHP)
+summary(Occupancy_Status_Housing_Units_ACS_13_DHP)
+
+# Percent renting
+Tenure_Owner_vs_Renter_Occupied_ACS_13_DHP<-read.csv('ACS_13_5YR_B25003_DHP.csv', stringsAsFactors = FALSE)
+Tenure_Owner_vs_Renter_Occupied_ACS_13_DHP <-select(Tenure_Owner_vs_Renter_Occupied_ACS_13_DHP, GEO.id, GEO.id2, GEO.display.label,
+                                                    HD01_VD01, HD01_VD02, HD01_VD03) %>%
+  rename(id=GEO.id, id2=GEO.id2, Geography=GEO.display.label,
+         TvRO_Total=HD01_VD01,
+         TvRO_Owner=HD01_VD02,
+         TvRO_Renter=HD01_VD03)
+
+Tenure_Owner_vs_Renter_Occupied_ACS_13_DHP <- mutate(Tenure_Owner_vs_Renter_Occupied_ACS_13_DHP, id=as.character(id),
+                                                    id2=as.character(id2),
+                                                    Geography=as.character(Geography),
+                                                    TvRO_Total=as.numeric(TvRO_Total),
+                                                    TvRO_Owner=as.numeric(TvRO_Owner),
+                                                    TvRO_Renter=as.numeric(TvRO_Renter))
+
+Tenure_Owner_vs_Renter_Occupied_ACS_13_DHP$TvRO_Perc_Owner <- Tenure_Owner_vs_Renter_Occupied_ACS_13_DHP$TvRO_Owner/Tenure_Owner_vs_Renter_Occupied_ACS_13_DHP$TvRO_Total
+Tenure_Owner_vs_Renter_Occupied_ACS_13_DHP$TvRO_Perc_Renter <- Tenure_Owner_vs_Renter_Occupied_ACS_13_DHP$TvRO_Renter/Tenure_Owner_vs_Renter_Occupied_ACS_13_DHP$TvRO_Total
+
+
+# Mean hours worked past 12 months
+
+Work_Status_Past_12_Months_ACS_13_DHP<-read.csv('ACS_13_5YR_S2303_DHP.csv', stringsAsFactors = FALSE)
+Work_Status_Past_12_Months_ACS_13_DHP <-select(Work_Status_Past_12_Months_ACS_13_DHP, GEO.id, GEO.id2, GEO.display.label,
+                                                    HC01_EST_VC22) %>%
+  rename(id=GEO.id, id2=GEO.id2, Geography=GEO.display.label,
+         WS_Past12Mos_16to64_MeanUsualHrsWorked=HC01_EST_VC22)
+Work_Status_Past_12_Months_ACS_13_DHP <- mutate(Work_Status_Past_12_Months_ACS_13_DHP, id=as.character(id),
+                                                     id2=as.character(id2),
+                                                     Geography=as.character(Geography),
+                                                     WS_Past12Mos_16to64_MeanUsualHrsWorked=as.numeric(WS_Past12Mos_16to64_MeanUsualHrsWorked))
+
+
+# School district rankings
+
+School_District_Rankings_1213 <-read.csv('School_District_Rankings_1213.csv', stringsAsFactors = FALSE)
+School_District_Rankings_1213 <-select(School_District_Rankings_1213, GEO.id, GEO.id2, GEO.display.label, County,
+                                       Schl_Dist_Rank_2012_13, Schl_Dist_Rank_2011_12) %>%
+  rename(id=GEO.id, id2=GEO.id2, Geography=GEO.display.label,
+         Same_School_Year_Ranking=Schl_Dist_Rank_2012_13,
+         Last_School_Year_Ranking=Schl_Dist_Rank_2011_12)
+School_District_Rankings_1213 <- mutate(School_District_Rankings_1213, id=as.character(id),
+                                                id2=as.character(id2),
+                                                Geography=as.character(Geography),
+                                                County=as.character(County),
+                                                Same_School_Year_Ranking=as.numeric(Same_School_Year_Ranking),
+                                                Last_School_Year_Ranking=as.numeric(Last_School_Year_Ranking))
+
+
+# Joining files
+
+library(maptools)
+library(rgdal)
+library(sp)
+library(ggplot2)
+library(ggmap)
+library(digest)
+library(Hmisc)
+gpclibPermit()
+library(psych)
+library(ggthemes)
+library(RColorBrewer)
+library(colorspace)
+
