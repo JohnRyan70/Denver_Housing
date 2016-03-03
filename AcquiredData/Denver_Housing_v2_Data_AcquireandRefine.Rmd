@@ -445,6 +445,20 @@ School_District_Rankings_1213 <- mutate(School_District_Rankings_1213, id=as.cha
 
 # Joining files
 
+ACSData<-left_join(Median_Value_ACS_13_DHP, Age_Sex_ACS_13_DHP, by=c("id")) 
+ACSData<-left_join(Median_Value_ACS_13_DHP, Age_Sex_ACS_13_DHP, by=c("id")) 
+ACSData2<-left_join(ACSData, Financial_Chars_ACS_13_DHP, by=c("id")) 
+ACSData3<-left_join(ACSData2, Households_and_Families_ACS_13_DHP, by=c("id")) 
+ACSData4<-left_join(ACSData3, Selected_Chars_ACS_13_DHP, by=c("id")) 
+ACSData5<-left_join(ACSData4, Median_Year_Structure_Built_ACS_13_DHP, by=c("id")) 
+ACSData6<-left_join(ACSData5, Occupancy_Status_Housing_Units_ACS_13_DHP, by=c("id")) 
+ACSData7<-left_join(ACSData6, Tenure_Owner_vs_Renter_Occupied_ACS_13_DHP, by=c("id")) 
+ACSData8<-left_join(ACSData7, Work_Status_Past_12_Months_ACS_13_DHP, by=c("id")) 
+ACSData9<-left_join(ACSData8, School_District_Rankings_1213, by=c("id")) 
+
+str(ACSData9)
+
+
 library(maptools)
 library(rgdal)
 library(sp)
