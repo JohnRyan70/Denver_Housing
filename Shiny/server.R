@@ -1,17 +1,16 @@
 # server.R
-setwd('C:/Users/John/Denver_Housing_Project/Shiny_Maps/Data')
-
+source("helpers.R")
+library(ggplot2)
+library(ggmap)
 library(shiny)
-library(maps)
-library(mapproj)
-load("ACSData10.RData")
-
                
 shinyServer(
   function(input, output) {
     output$map <- renderPlot({
-      data <- switch(input$var, 
-                     "Median Housing Values" = ACSData10$HouseValue_Median
+      column <- switch(input$var, 
+                     "Median Housing Values" = ACSData10$HouseValue_Median,
+                     "Percent Housing Owners Below $25K Income" = ACSData10$Occ_HousingUnits_HHInc12Mos_Owner_Perc_25KandBelow
+
     )
       
       color <- switch(input$var, 
@@ -46,12 +45,15 @@ shinyServer(
                        "School District State Rank, Previous Yr" = "Schl Dist State Rank, Previous Yr")
       
       
-      
-      percent_map(var = data, 
-                  color = color, 
-                  legend.title = legend, 
-                  max = input$range[2], 
-                  min = input$range[1])
+    ggmap(DenverMetroMap) + 
+      geom_polygon(aes(x = long, y = lat, group=id, fill = column),
+                   data = ACSData10, color = color, alpha = .4, size = .2)
+    
+#      percent_map(var = data, 
+#                  color = color, 
+#                  legend.title = legend, 
+#                  max = input$range[2], 
+#                  min = input$range[1])
     })
   }
 )
