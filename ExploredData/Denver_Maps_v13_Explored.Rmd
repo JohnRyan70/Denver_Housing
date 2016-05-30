@@ -1,0 +1,809 @@
+---
+output: word_document
+---
+
+# Mapping the Denver Housing Market
+
+
+# Part Two: Exploration
+## First Glances: Correlations
+
+Now we can begin to explore our data! As a first step, we will run some simple correlations between the median house value and various indicators.
+
+
+```{r}
+
+library(maptools)
+library(rgdal)
+library(sp)
+library(ggplot2)
+library(ggmap)
+library(digest)
+library(Hmisc)
+gpclibPermit()
+library(psych)
+library(ggthemes)
+library(plyr)
+library(dplyr)
+library(RColorBrewer)
+library(colorspace)
+
+setwd('C:/Users/John/Denver_Housing_Project/ACS_Data/Final_Data')
+
+load("ACSData9.RData")
+
+
+cor(ACSData9$Median_House_Value, ACSData9$Perc_18Plus, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$Perc_65Plus, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$MedianAge, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$OldAgeDependencyRatio, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$ChildDependencyRatio, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$Perc_Under18, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$Perc_20to29, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$Perc_30to39, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$Perc_40to49, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$Perc_50to59, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$Perc_60to69, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$HHInc12Mos_Perc35to50K, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$HHInc12Mos_Perc35to50K_Owner, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$HHInc12Mos_Perc50to75K, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$HHInc12Mos_Perc50to75K_Owner, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$HHInc12Mos_Perc75to100K, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$HHInc12Mos_Perc75to100K_Owner, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$HHInc12Mos_Perc25KandBelow, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$HHInc12Mos_Owner_Perc25KandBelow, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$HHInc12Mos_Perc25Kto75K, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$HHInc12Mos_Owner_Perc25Kto75K, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$HHInc12Mos_Perc75KandAbove, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$HHInc12Mos_Owner_Perc75KandAbove, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$HHs_AvgFamilySize, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$HHs_AvgFamilySize_MarriedCoupleFamily, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$HHs_Total_PercOneUnitStructure, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$HHs_Total_UnitsinStructure_PercTwoPlusUnitStructure, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$HHs_Perc_MarriedCoupleFamilyOnly, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$SCs_MedianAge, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$SCs_PercNotHSGrad, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$SCs_PercHSGradOnly, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$SCs_PercSomeCollegetoAA, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$SCs_PercBADegreeOnly, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$SCs_PercGradorProfDegree, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$SCs_IndIncome_Perc25to35K, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$SCs_IndIncome_Perc35to50K, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$SCs_IndIncome_Perc50to65K, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$SCs_IndIncome_Perc65to75K, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$SCs_IndIncome_Perc75KPlus, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$SCs_IndIncome_MedianIncome, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$SCs_PercBelow100PercPoverty, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$SCs_PercAtLeastHSGrad, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$SCs_PercAtLeastBADegree, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$SCs_IndIncome_PercUpto25K, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$SCs_IndIncome_Perc25Kto75K, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$SCs_IndIncome_Perc75KPlus, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$SCs_PercUpto150PercentPovertyLevel, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$House_MedianYearBuilt, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$HousingUnits_Perc_Vacant, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$TvRO_Perc_Owner, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$TvRO_Perc_Renter, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$MeanHrsWorked, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$Same_School_Year_Ranking, use = "pairwise.complete.obs", method = c("pearson"))
+cor(ACSData9$Median_House_Value, ACSData9$Last_School_Year_Ranking, use = "pairwise.complete.obs", method = c("pearson"))
+```
+
+What do you discover from the fifty-two variables you have tried? For one thing, education matters. There are some strong findings: neighborhoods with a greater concentration of college graduates (and higher) tend to live in significantly more expensive housing areas (p = .76), and even higher for graduate/professional degrees (p = .79). Conversely, areas with higher rates of high school dropouts tend to have significantly lower housing values (p = -.538). On a related note, higher poverty - people living below 150% of the poverty rate - tends to correlate negatively with housing values (p = -.544).
+
+Second, income levels can be important. There is a strong positive relationship between a neighborhood's individual income and housing values (p = .738), as well as house-owner households earning at least $75K (p = .756). There appears to be a strong negative pattern between middle-class income ($25 to $75K) and housing values, whether among house-owner households or households in general (p = -.734 -.706). 
+
+Third, individual and family characteristics are somewhat important. Older neighborhoods tend to have higher housing values, as do areas with a higher percentage of married couple families (p = .468 and .429). Yet, children and the elderly appear to have no effect on housing values. Also, the general age of houses do not seem to matter at all.
+
+Despite the talk about the importance of schools, there is a more modest correlation with housing values (p = .373). 
+
+
+
+## First Glances: Some Graphs
+
+Perhaps it will help to show these things graphically. Here are a few representative relationships:
+
+
+```{r}
+
+library(plotly)
+library(ggplot2)
+
+qplot(x = Median_House_Value, data = ACSData9, binwidth = 5000,
+      xlab = 'Number of neighborhoods',
+      ylab = 'Median housing value')
+
+
+p1 <- ggplot(aes(x = HHInc12Mos_Owner_Perc25KandBelow, 
+           y = Median_House_Value), data = ACSData9) +
+           geom_point(alpha = .4) +
+           labs(x="Percent of Owners with Income below $25K", y="Median House Value")
+p1 + stat_smooth(method = "lm", alpha = .2, size = 0.5)
+
+p2 <-ggplot(aes(x = HHInc12Mos_Owner_Perc25Kto75K, 
+           y = Median_House_Value), data = ACSData9) +
+           geom_point(alpha = .4) +
+          labs(x="Percent of Owners with Income from $25K to $75K", y="Median House Value")
+p2 + stat_smooth(method = "lm", alpha = .2, size = 0.5)
+
+
+p3 <-ggplot(aes(x = HHInc12Mos_Owner_Perc75KandAbove, 
+           y = Median_House_Value), data = ACSData9) +
+           geom_point(alpha = .4) +
+          labs(x="Percent of Owners with Income at Least $75K", y="Median House Value")
+p3 + stat_smooth(method = "lm", alpha = .2, size = 0.5)
+
+
+p4 <-ggplot(aes(x = HHs_Perc_MarriedCoupleFamilyOnly, 
+           y = Median_House_Value), data = ACSData9) +
+           geom_point(alpha = .4) +
+          labs(x="Percent of Households as Married-Couple Families", y="Median House Value")
+p4 + stat_smooth(method = "lm", alpha = .2, size = 0.5)
+
+p5 <-ggplot(aes(x = SCs_IndIncome_MedianIncome, 
+           y = Median_House_Value), data = ACSData9) +
+           geom_point(alpha = .4) +
+          labs(x="Median Individual Income", y="Median House Value")
+p5 + stat_smooth(method = "lm", alpha = .2, size = 0.5)
+
+p6 <-ggplot(aes(x = SCs_PercAtLeastBADegree, 
+           y = Median_House_Value), data = ACSData9) +
+           geom_point(alpha = .4) +
+          labs(x="Percent of People with at Least Bachelor's Degree", y="Median House Value")
+p6 + stat_smooth(method = "lm", alpha = .2, size = 0.5)
+
+p7 <-ggplot(aes(x = SCs_PercUpto150PercentPovertyLevel, 
+           y = Median_House_Value), data = ACSData9) +
+           geom_point(alpha = .4) +
+          labs(x="Percent of People Living Below 150 Percent of Poverty Level", y="Median House Value")
+p7 + stat_smooth(method = "lm", alpha = .2, size = 0.5)
+
+p8 <-ggplot(aes(x = House_MedianYearBuilt, 
+           y = Median_House_Value), data = ACSData9) +
+           geom_point(alpha = .4) +
+          labs(x="Median Year House Built", y="Median House Value")
+p8 + stat_smooth(method = "lm", alpha = .2, size = 0.5)
+
+p10 <-ggplot(aes(x = TvRO_Perc_Renter, 
+           y = Median_House_Value), data = ACSData9) +
+           geom_point(alpha = .4) +
+          labs(x="Percent of Units Rented [vs. Owned]", y="Median House Value")
+p10 + stat_smooth(method = "lm", alpha = .2, size = 0.5)
+
+p11 <-ggplot(aes(x = MeanHrsWorked, 
+           y = Median_House_Value), data = ACSData9) +
+           geom_point(alpha = .4) +
+          labs(x="Person's Average Usual Hours Worked", y="Median House Value")
+p11 + stat_smooth(method = "lm", alpha = .2, size = 0.5)
+
+p12 <-ggplot(aes(x = Same_School_Year_Ranking, y = Median_House_Value), data = ACSData9) +
+            geom_point(alpha = .4) + 
+            labs(x="School District Ranking, Same Year", y="Median House Value")
+p12 + stat_smooth(method = "lm", alpha = .2, size = 0.5)
+
+p13 <-ggplot(aes(x = Last_School_Year_Ranking, y = Median_House_Value), data = ACSData9) +
+            geom_point(alpha = .4) + 
+            labs(x="School District Ranking, Previous Year", y="Median House Value")
+p13 + stat_smooth(method = "lm", alpha = .2, size = 0.5)
+
+```
+
+## Mapping Relationships Visually
+
+### Preparing the Data 
+
+Okay, so perhaps you - like many others - hate staring at graphs. It will make more sense to create visual maps instead. In this way, we can show how neighborhoods can vary - sometimes drastically!
+
+As you can see in our Shiny app (more about this later), visual maps can provide a powerful way to tell a data story.
+
+Creating these types of maps takes two basic steps. First, we will use a simple yet accurate starting map to represent the Denver metropolitan area. For this stage of the project, Google's maps are sufficient.
+
+Second, we shall find some geographic files to represent the boundaries of each census tract. The Census Bureau provides shapefiles for just such an occasion, providing polygon shapes.
+
+Third, in order to represent our variables of interest, we shall merge the shapefiles into our dataset.
+
+There are a few necessary technical steps in order to use the shapefiles. We must read the GEOID variable as a character vector, and then fortify them.
+
+
+```{r}
+#
+#
+#################################################################
+#
+#  Start mapping
+#  Define map source type and color
+#
+
+DenverMetro <- c(-106, 40.3, -104, 39.1)
+DenverMetroMap <- get_map(location=DenverMetro, source = "google", 
+                          maptype = "roadmap", zoom = 11, crop=FALSE)
+ggmap(DenverMetroMap)
+
+# Add polygons from tract file
+# https://www.census.gov/geo/maps-data/data/cbf/cbf_tracts.html
+setwd('C:/Users/John/Denver_Housing_Project/ACS_Data/Final_Data')
+getwd()
+tract <- readOGR(dsn=".", layer = "cb_2014_08_tract_500k")
+tract@data$GEOID<-as.character(tract@data$GEOID)
+
+# convert polygons to data.frame
+Denver_tract<-fortify(tract, region = "GEOID") 
+Denver_tract$id <-substring(Denver_tract$id, 2) # id had extra 0 to left
+
+str(Denver_tract$id)
+
+library(reshape) 
+Denver_tract <-rename(Denver_tract, c('id'='id2'))
+
+
+
+##########################################
+#
+# Join polygons to housing value data
+#
+
+Denver_tract$id <-as.character(Denver_tract$id)
+ACSData9$id <-as.character(ACSData9$id)
+
+
+ACSData10 <-left_join(Denver_tract, ACSData9, by=c('id')) 
+
+save(ACSData9, file = "ACSData9.RData")
+save(ACSData10, file = "ACSData10.RData")
+
+```
+
+### Mapping Relationships
+
+
+```{r}
+
+
+###########################
+# 
+# Plot median housing value
+# 
+
+describe(ACSData10$Median_House_Value, na.rm = TRUE)
+quantile(ACSData10$Median_House_Value, c(.875, .75, .625, .5, .375, .25, .125), na.rm = TRUE)
+
+# Plot median housing values
+
+ggmap(DenverMetroMap) + 
+  geom_polygon(aes(x = long, y = lat, group=id, fill = Median_House_Value),
+             data = ACSData10, color="black", alpha = .4, size = .2) +
+            scale_fill_gradientn(colours = c("red4", "red2", "red", "lightcoral", "lightblue3", "cyan4", "blue", "midnightblue"),
+                       values = c(1, .449900, .383700, .331300, .273400, .241200, .209000, .159800, 0)) +
+  labs(x = 'Longitude', y = 'Latitude') + ggtitle('Median House Value by Census Tract, 2013')
+
+ggmap(DenverMetroMap) + 
+  geom_polygon(aes(x = long, y = lat, group=id, fill = Median_House_Value),
+             data = ACSData10, alpha = .4, size = .2) +
+            scale_colour_brewer(palette = "Purples") +
+  labs(x = 'Longitude', y = 'Latitude') + ggtitle('Median House Value by Census Tract, 2013')
+
+#########################
+#
+# Plot Low-income households
+#
+
+describe(ACSData10$HHInc12Mos_Owner_Perc25KandBelow, na.rm = TRUE)
+quantile(ACSData10$HHInc12Mos_Owner_Perc25KandBelow, c(.875, .75, .625, .5, .375, .25, .125), na.rm = TRUE)
+
+ggmap(DenverMetroMap) + 
+  geom_polygon(aes(x = long, y = lat, group=id, fill = HHInc12Mos_Owner_Perc25KandBelow), data = ACSData10, color="black", alpha = .4, size = .2)
+
+
+ggmap(DenverMetroMap) + 
+  geom_polygon(aes(x = long, y = lat, group=id, fill = HHInc12Mos_Owner_Perc25KandBelow), data = ACSData10, color="black", alpha = .4, size = .2) +
+            scale_fill_gradientn(colours = c("red4", "red2", "red", "lightcoral", "lightblue3", "cyan4", "blue", "midnightblue"),
+                       values = c(1, .182625, .137, .105, .089, .07, .04975, .031, 0)) +
+  labs(x = 'Longitude', y = 'Latitude') + ggtitle('Percent Owners with Household Income Below $25K')
+
+##########################################
+# 
+# Plot middle-income values
+#
+
+describe(ACSData10$HHInc12Mos_Owner_Perc25Kto75K, na.rm = TRUE)
+quantile(ACSData10$HHInc12Mos_Owner_Perc25Kto75K, c(.875, .75, .625, .5, .375, .25, .125), na.rm = TRUE)
+
+ggmap(DenverMetroMap) + 
+  geom_polygon(aes(x = long, y = lat, group=id, fill = HHInc12Mos_Owner_Perc25Kto75K), data = ACSData10, color="black", alpha = .4, size = .2)
+
+
+ggmap(DenverMetroMap) + 
+  geom_polygon(aes(x = long, y = lat, group=id, fill = HHInc12Mos_Owner_Perc25Kto75K), data = ACSData10, color="black", alpha = .4, size = .2) +
+            scale_fill_gradientn(colours = c("red4", "red2", "red", "lightcoral", "lightblue3", "cyan4", "blue", "midnightblue"),
+                       values = c(1, .559, .482, .425875, .367, .319125, .264, .200375, 0)) +
+  labs(x = 'Longitude', y = 'Latitude') + ggtitle('Percent Owners with Household Income from $25K to $75K')
+
+
+
+##########################################
+# 
+# Plot upper-income values
+#
+
+describe(ACSData10$HHInc12Mos_Owner_Perc75KandAbove, na.rm = TRUE)
+quantile(ACSData10$HHInc12Mos_Owner_Perc75KandAbove, c(.875, .75, .625, .5, .375, .25, .125), na.rm = TRUE)
+
+ggmap(DenverMetroMap) + 
+  geom_polygon(aes(x = long, y = lat, group=id, fill = HHInc12Mos_Owner_Perc75KandAbove),
+             data = ACSData10, color="black", alpha = .4, size = .2)
+
+ggmap(DenverMetroMap) + 
+  geom_polygon(aes(x = long, y = lat, group=id, fill = HHInc12Mos_Owner_Perc75KandAbove),
+             data = ACSData10, color="black", alpha = .4, size = .2) +
+            scale_fill_gradientn(colours = c("red4", "red2", "red", "lightcoral", "lightblue3", "cyan4", "blue", "midnightblue"),
+                       values = c(1, .735625, .673250, .600875, .541, .45325, .38175, .266, 0)) +
+  labs(x = 'Longitude', y = 'Latitude') + ggtitle('Percent Owners with Household Income Above $75K')
+
+
+
+##########################################
+# 
+# Plot married-couple values
+#
+
+describe(ACSData10$HHs_Perc_MarriedCoupleFamilyOnly, na.rm = TRUE)
+quantile(ACSData10$HHs_Perc_MarriedCoupleFamilyOnly, c(.875, .75, .625, .5, .375, .25, .125), na.rm = TRUE)
+
+ggmap(DenverMetroMap) + 
+  geom_polygon(aes(x = long, y = lat, group=id, fill = HHs_Perc_MarriedCoupleFamilyOnly),
+             data = ACSData10, color="black", alpha = .4, size = .2)
+
+
+ggmap(DenverMetroMap) + 
+  geom_polygon(aes(x = long, y = lat, group=id, fill = HHs_Perc_MarriedCoupleFamilyOnly),
+             data = ACSData10, color="black", alpha = .4, size = .2) +
+            scale_fill_gradientn(colours = c("red4", "red2", "red", "lightcoral", "lightblue3", "cyan4", "blue", "midnightblue"),
+                       values = c(100, .7139986, .6287926, .5412984, .4774722, .4193193, .3575155, .2693803, 0)) +
+  labs(x = 'Longitude', y = 'Latitude') + ggtitle('Percent Married Couple Families by Census Tract, 2013')
+
+##########################################
+# 
+# Plot median individual income values
+#
+
+describe(ACSData10$SCs_IndIncome_MedianIncome, na.rm = TRUE)
+describe(ACSData9$SCs_IndIncome_MedianIncome, na.rm = TRUE)
+describe(SCs_13$SCs_IndIncome_MedianIncome, na.rm = TRUE)
+
+quantile(ACSData10$SCs_IndIncome_MedianIncome, c(.875, .75, .625, .5, .375, .25, .125), na.rm = TRUE)
+quantile(SCs_13$SCs_IndIncome_MedianIncome, c(.875, .75, .625, .5, .375, .25, .125), na.rm = TRUE)
+
+ggmap(DenverMetroMap) + 
+  geom_polygon(aes(x = long, y = lat, group=id, fill = SCs_IndIncome_MedianIncome),
+             data = ACSData10, color="black", alpha = .4, size = .2)
+
+ggmap(DenverMetroMap) + 
+  geom_polygon(aes(x = long, y = lat, group=id, fill = SCs_IndIncome_MedianIncome),
+             data = ACSData10, color="black", alpha = .4, size = .2) +
+            scale_fill_gradientn(colours = c("red4", "red2", "red", "lightcoral", "lightblue3", "cyan4", "blue", "midnightblue"),
+                       values = c(108000, 50190.5, 43077.5, 38849.5, 34052, 30669, 26064, 21449.5, 0)) +
+  labs(x = 'Longitude', y = 'Latitude') + ggtitle('Median Individual Income')
+
+##########################################
+# 
+# Plot percent with college degree values
+#
+
+describe(ACSData10$SCs_PercAtLeastBADegree, na.rm = TRUE)
+quantile(ACSData10$SCs_PercAtLeastBADegree, c(.875, .75, .625, .5, .375, .25, .125), na.rm = TRUE)
+
+ggmap(DenverMetroMap) + 
+  geom_polygon(aes(x = long, y = lat, group=id, fill = SCs_PercAtLeastBADegree),
+             data = ACSData10, color="black", alpha = .4, size = .2)
+
+
+ggmap(DenverMetroMap) + 
+  geom_polygon(aes(x = long, y = lat, group=id, fill = SCs_PercAtLeastBADegree),
+             data = ACSData10, color="black", alpha = .4, size = .2) +
+            scale_fill_gradientn(colours = c("red4", "red2", "red", "lightcoral", "lightblue3", "cyan4", "blue", "midnightblue"),
+                       values = c(1, .626, .55, .469, .386, .301, .2305, .137, 0)) +
+  labs(x = 'Longitude', y = 'Latitude') + ggtitle('Percent of People with A College Degree or More')
+
+
+##########################################
+# 
+# Plot percent of people below 150 percent poverty level values
+#
+
+describe(ACSData10$SCs_PercUpto150PercentPovertyLevel, na.rm = TRUE)
+quantile(ACSData10$SCs_PercUpto150PercentPovertyLevel, c(.875, .75, .625, .5, .375, .25, .125), na.rm = TRUE)
+ggmap(DenverMetroMap) + 
+  geom_polygon(aes(x = long, y = lat, group=id, fill = SCs_PercUpto150PercentPovertyLevel),
+             data = ACSData10, color="black", alpha = .4, size = .2)
+
+
+ggmap(DenverMetroMap) + 
+  geom_polygon(aes(x = long, y = lat, group=id, fill = SCs_PercUpto150PercentPovertyLevel),
+             data = ACSData10, color="black", alpha = .4, size = .2) +
+            scale_fill_gradientn(colours = c("red4", "red2", "red", "lightcoral", "lightblue3", "cyan4", "blue", "midnightblue"),
+                       values = c(1, .39925, .3045, .21975, .159, .118, .0785, .05075, 0)) +
+  labs(x = 'Longitude', y = 'Latitude') + ggtitle('Percent Living Below 150 Perent Poverty Level')
+
+
+##################################
+#
+# Plot median year built values
+#
+
+describe(ACSData10$House_MedianYearBuilt, na.rm = TRUE)
+quantile(ACSData10$House_MedianYearBuilt, c(.875, .75, .625, .5, .375, .25, .125), na.rm = TRUE)
+
+ggmap(DenverMetroMap) + 
+  geom_polygon(aes(x = long, y = lat, group=id, fill = House_MedianYearBuilt),
+             data = ACSData10, color="black", alpha = .4, size = .2)
+
+
+ggmap(DenverMetroMap) + 
+  geom_polygon(aes(x = long, y = lat, group=id, fill = House_MedianYearBuilt),
+             data = ACSData10, color="black", alpha = .4, size = .2) +
+            scale_fill_gradientn(colours = c("red4", "red2", "red", "lightcoral", "lightblue3", "cyan4", "blue", "midnightblue"),
+                       values = c(2016, 2002, 1996, 1989, 1984, 1978, 1972, 1962, 0)) +
+  labs(x = 'Longitude', y = 'Latitude') + ggtitle('Median Year House Built by Census Tract, 2013')
+
+####################################
+# 
+# Plot percent vacant data
+#
+
+describe(ACSData10$HousingUnits_Perc_Vacant, na.rm = TRUE)
+quantile(ACSData10$HousingUnits_Perc_Vacant, c(.875, .75, .625, .5, .375, .25, .125), na.rm = TRUE)
+
+# Plot percent vacant values
+ggmap(DenverMetroMap) + 
+  geom_polygon(aes(x = long, y = lat, group=id, fill = HousingUnits_Perc_Vacant),
+             data = ACSData10, color="black", alpha = .4, size = .2)
+
+
+ggmap(DenverMetroMap) + 
+  geom_polygon(aes(x = long, y = lat, group=id, fill = HousingUnits_Perc_Vacant),
+             data = ACSData10, color="black", alpha = .4, size = .2) +
+            scale_fill_gradientn(colours = c("red4", "red2", "red", "lightcoral", "lightblue3", "cyan4", "blue", "midnightblue"),
+                       values = c(1, .112186, .0865384, .070072, .05555555, .0427586, .0305454, .0157255, 0)) +
+  labs(x = 'Longitude', y = 'Latitude') + ggtitle('Percent Housing Units Vacant by Census Tract, 2013')
+
+
+
+####################################
+#
+# Plot school district rank data
+
+describe(ACSData10$Same_School_Year_Ranking, na.rm = TRUE)
+quantile(ACSData10$Same_School_Year_Ranking, c(.875, .75, .625, .5, .375, .25, .125), na.rm = TRUE)
+
+ggmap(DenverMetroMap) + 
+  geom_polygon(aes(x = long, y = lat, group=id, fill = Same_School_Year_Ranking),
+             data = ACSData10, color="black", alpha = .4, size = .2)
+
+ggmap(DenverMetroMap) + 
+  geom_polygon(aes(x = long, y = lat, group=id, fill = Same_School_Year_Ranking),
+             data = ACSData10, color="black", alpha = .4, size = .2) +
+            scale_fill_gradientn(colours = c("red4", "red2", "red", "lightcoral", "lightblue3", "cyan4", "blue", "midnightblue"),
+                       values = c(1, .763, .682, .59, .59, .558, .316, .294, 0)) +
+  labs(x = 'Longitude', y = 'Latitude') + ggtitle('School District State Rank, Same Year, by Census Tract, 2013')
+
+describe(ACSData10$Last_School_Year_Ranking, na.rm = TRUE)
+quantile(ACSData10$Last_School_Year_Ranking, c(.875, .75, .625, .5, .375, .25, .125), na.rm = TRUE)
+
+ggmap(DenverMetroMap) + 
+  geom_polygon(aes(x = long, y = lat, group=id, fill = Last_School_Year_Ranking),
+             data = ACSData10, color="black", alpha = .4, size = .2)
+
+m5 <- ggmap(DenverMetroMap) + 
+  geom_polygon(aes(x = long, y = lat, group=id, fill = Last_School_Year_Ranking),
+             data = ACSData10, color="black", alpha = .4, size = .2) +
+            scale_fill_gradientn(colours = c("red4", "red2", "red", "lightcoral", "lightblue3", "cyan4", "blue", "midnightblue"),
+                       values = c(1, .768, .659, .601, .557, .263, .263, .220, 0)) +
+  labs(x = 'Longitude', y = 'Latitude') + ggtitle('School District State Rank, Previous Year, by Census Tract, 2013')
+
+m5
+
+```
+
+# Mapping the Denver Housing Market
+
+# Part Four: What Explains Neighborhood Housing values?
+## Dealing with Missing Values
+
+Now we shift gears and begin to explore variations in the housing market. Why do some neighborhoods have more expensive houses than others? 
+
+Before going ahead, it is important to prepare the data. One problem with the data pertains to missing values. For various reasons, certain census tracts do not have a median housing value and thus we must remove them from our analysis before we begin. 
+
+
+```{r}
+
+
+#################################
+#
+
+setwd('C:/Users/John/Denver_Housing_Project/ACS_Data/Final_Data')
+
+load("ACSData9.RData")
+load("ACSData10.RData")
+
+# Identify and remove missing values from analysis
+
+# which(! complete.cases(ACSData9))
+# ACSData9[!complete.cases(ACSData9),]
+# ACSData9nona <-na.omit(ACSData9$HouseValue_Median)
+
+table(is.na(ACSData9$Median_House_Value))
+
+# Noticing ten missing observations of median housing value, and taking out 
+test <- subset(ACSData9, is.na(Median_House_Value)) # So you can look at the 2 observations missing this variable
+ACSData9nona <- subset(ACSData9, !is.na(Median_House_Value)) 
+table(is.na(ACSData9nona$Median_House_Value)) #Now no NA's in median housing value
+```
+
+## Splitting the Data
+
+Of course, one of the problems in any statistical analysis is overfitting the data. If your algorithm is too complicated, it is useless in another context. A fun example for presidential elections is this [XKCD comic](https://xkcd.com/1122).
+
+As a way to account for this, it often makes sense to split up the data into two datasets - one to design (or 'train') a statistical model, the other, to test the effectiveness of said model on new data. If the trainign model performs poorly on the test dataset, it's time to go back to the drawing board!
+
+
+```{r}
+
+
+# Create a training/test split of 70% train, 30% test
+
+set.seed(1234)
+ind <-sample(2,nrow(ACSData9nona), replace=TRUE, prob=c(0.7, 0.3))
+ACSData9nona.training <-ACSData9nona[ind==1,]
+ACSData9nona.test <-ACSData9nona[ind==2,]
+summary(ACSData9nona.training)
+table(is.na(ACSData9nona.training$Median_House_Value)) # 399 observations
+table(is.na(ACSData9nona.test$Median_House_Value)) # 178 observations
+
+save(ACSData9nona, file = "ACSData9nonatraining.RData")
+save(ACSData9nona.training, file = "ACSData9nona.training.RData")
+save(ACSData9nona.test, file = "ACSData9nona.test.RData")
+```
+
+
+
+```{r}
+
+
+# Now, to test models using regression
+
+setwd('C:/Users/John/Denver_Housing_Project/ACS_Data/Final_Data')
+load("ACSData9nona.training.RData")
+load("ACSData9nona.test.RData")
+
+library(corrplot)
+library(foreign)
+library(glmnet)
+library(broom)
+library(foreign)
+library(MASS)
+
+
+model0 <- lm(Median_House_Value ~ 
+                          HHInc12Mos_Perc5to9K +
+                          HHInc12Mos_Perc5to9K_Owner +
+                          HHInc12Mos_Perc10to14K +
+                          HHInc12Mos_Perc10to14K_Owner +
+                          HHInc12Mos_Perc15to20K +
+                          HHInc12Mos_Perc15to20K_Owner +
+                          HHInc12Mos_Perc20to25K +
+                          HHInc12Mos_Perc20to25K_Owner +
+                          HHInc12Mos_Perc25to35K +
+                          HHInc12Mos_Perc25to35K_Owner +
+                          HHInc12Mos_Perc35to50K +
+                          HHInc12Mos_Perc35to50K_Owner +
+                          HHInc12Mos_Perc50to75K +
+                          HHInc12Mos_Perc50to75K_Owner +
+                          HHInc12Mos_Perc75to100K +
+                          HHInc12Mos_Perc75to100K_Owner +
+                          HHInc12Mos_Perc100to150K +
+                          HHInc12Mos_Perc100to150K_Owner +
+                          HHInc12Mos_Perc150KPlus +
+                          HHInc12Mos_Perc150KPlus_Owner,
+                  data = ACSData9nona.training)
+# make predictions and summarize accuracy
+predictions0 <- predict(model0, ACSData9nona.training)
+str(predictions0)
+ 
+
+model0.res = resid(model0)
+summary(model0)
+AIC(model0)
+BIC(model0)
+summary(model0.res)
+
+
+opar <- par(mfrow = c(2,2), oma = c(0, 0, 1.1, 0))
+plot(model0, las = 1)
+
+# Checking for influence and leverage
+
+cooksd0 <-cooks.distance(model0)
+stdresd0 <-stdres(model0)
+dfbeta0 <-dfbetas(model0)
+dffit0 <-dffits(model0)
+influence0 <-influence.measures(model0)
+a <-cbind(cooksd0, ACSData9nona.training)
+a[c(1:5)]
+a[cooksd0>4/399, c(1:6)]
+# rstudent (model0)
+# dffits   (model0)
+# dfbetas  (model0)
+# covratio (model0)
+# cooks.distance(model0)
+# Check largest cooks
+
+model1 <- lm(Median_House_Value ~ 
+                  HHInc12Mos_Owner_Perc25KandBelow +
+                  HHInc12Mos_Owner_Perc75KandAbove +
+                  HHs_Perc_MarriedCoupleFamilyOnly +
+                  SCs_IndIncome_MedianIncome +
+                  SCs_PercAtLeastBADegree +
+                  SCs_PercUpto150PercentPovertyLevel +
+                  HousingUnits_Perc_Vacant +
+                  TvRO_Perc_Renter +
+                  MeanHrsWorked +
+                  Last_School_Year_Ranking,
+                  data = ACSData9nona.training)
+
+
+# make predictions and summarize accuracy
+predictions1 <- predict(model1, ACSData9nona.training)
+str(predictions1)
+ 
+
+model1.res = resid(model1)
+summary(model1)
+AIC(model1)
+BIC(model1)
+summary(model1.res)
+
+
+opar <- par(mfrow = c(2,2), oma = c(0, 0, 1.1, 0))
+plot(model1, las = 1)
+
+# Checking for influence and leverage
+
+cooksd <-cooks.distance(model1)
+stdresd <-stdres(model1)
+dfbeta <-dfbetas(model1)
+dffit <-dffits(model1)
+influence <-influence.measures(model1)
+a <-cbind(cooksd, ACSData9nona.training)
+a[c(1:5)]
+a[cooksd>4/399, c(1:6)]
+# rstudent (model1)
+# dffits   (model1)
+# dfbetas  (model1)
+# covratio (model1)
+# cooks.distance(model1)
+# Check largest cooks
+
+ACSData9nona.training[c(145, 138, 417, 330, 319, 104, 415, 447, 312, 437, 109, 438, 476, 283, 2, 365, 242, 55, 578, 100, 163, 353, 421, 186, 270, 278, 156, 216, 191, 35, 182), 1:5]
+
+
+# Dropping percent owners below $25K and last year's school district ranking
+
+
+model2 <- lm(Median_House_Value ~ 
+                  HHInc12Mos_Owner_Perc75KandAbove +
+                  HHs_Perc_MarriedCoupleFamilyOnly +
+                  SCs_IndIncome_MedianIncome +
+                  SCs_PercAtLeastBADegree +
+                  SCs_PercUpto150PercentPovertyLevel +
+                  HousingUnits_Perc_Vacant +
+                  TvRO_Perc_Renter +
+                  MeanHrsWorked,
+                  data = ACSData9nona.training)
+
+summary(model2)
+AIC(model2)
+BIC(model2)
+
+opar <- par(mfrow = c(2,2), oma = c(0, 0, 1.1, 0))
+plot(model2, las = 1)
+
+cooksd <-cooks.distance(model2)
+stdresd <-stdres(model2)
+dfbeta <-dfbetas(model2)
+dffit <-dffits(model2)
+influence <-influence.measures(model2)
+a <-cbind(cooksd, ACSData9nona.training)
+a[c(1:5)]
+a[cooksd>4/399, c(1:6)]
+#rstudent (model2)
+#dffits   (model2)
+#dfbetas  (model2)
+#covratio (model2)
+#cooks.distance(model2)
+
+
+
+# Also dropping median house year
+
+
+model3 <- lm(Median_House_Value ~ 
+                  HHInc12Mos_Owner_Perc75KandAbove +
+                  HHs_Perc_MarriedCoupleFamilyOnly +
+                  SCs_IndIncome_MedianIncome +
+                  SCs_PercAtLeastBADegree +
+                  SCs_PercUpto150PercentPovertyLevel +
+                  HousingUnits_Perc_Vacant +
+                  TvRO_Perc_Renter +
+                  MeanHrsWorked,
+                  data = ACSData9nona.training)
+
+
+summary(model3)
+AIC(model3)
+BIC(model3)
+
+opar <- par(mfrow = c(2,2), oma = c(0, 0, 1.1, 0))
+plot(model3, las = 1)
+
+#########################
+#
+#
+# Create smaller dataset to check for collinearity between variables
+
+
+
+# ACSData11 <-select(data = ACSData9nona.training,
+#                  'Median_House_Value', 
+#                  'HHInc12Mos_Owner_Perc25KandBelow',
+#                  'HHInc12Mos_Owner_Perc75KandAbove',
+#                  'HHs_Perc_MarriedCoupleFamilyOnly',
+#                  'SCs_IndIncome_MedianIncome',
+#                  'SCs_PercAtLeastBADegree',
+#                  'SCs_PercUpto150PercentPovertyLevel',
+#                  'HousingUnits_Perc_Vacant',
+#                  'TvRO_Perc_Renter',
+#                  'MeanHrsWorked',
+#                  'Last_School_Year_Ranking')
+
+############################
+#
+#
+#  Try LASSO regression to reduce multicollinearity
+
+library(glmnet)
+
+# How many missing values in median house value for training dataset
+
+# sum(is.na(ACSData9.training$HouseValue_Median))
+# ACSData9.training=na.omit(ACSData9.training$HouseValue_Median)
+# str(ACSData9.training)
+
+x=model.matrix(Median_House_Value ~ 
+                  HHInc12Mos_Owner_Perc25KandBelow +
+                  HHInc12Mos_Owner_Perc75KandAbove +
+                  HHs_Perc_MarriedCoupleFamilyOnly +
+                  SCs_IndIncome_MedianIncome +
+                  SCs_PercAtLeastBADegree +
+                  SCs_PercUpto150PercentPovertyLevel +
+                  HousingUnits_Perc_Vacant +
+                  TvRO_Perc_Renter +
+                  MeanHrsWorked +
+                  Last_School_Year_Ranking,
+                  data = ACSData9nona.training)
+
+
+summary(x)
+y=ACSData9nona.training$Median_House_Value
+summary(y)
+fit.lasso=glmnet(x,y,alpha=1)
+plot(fit.lasso,xvar="lambda",label=TRUE)
+cv.lasso=cv.glmnet(x,y)
+plot(cv.lasso)
+coef(cv.lasso)
+summarise(ACSData9nona.training)
+summarise(ACSData9nona)
+
+summary(ACSData9nona$HouseValue_Median)
+
+
+```
