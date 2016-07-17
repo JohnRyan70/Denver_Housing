@@ -1,0 +1,538 @@
+
+
+# Mapping the Denver Housing Market
+
+## Introduction 
+
+Imagine yourself having just improved your career with a new job. Congratulations! However, the job includes re-location to a new metropolitan area, and you will probably be staying for a few years.
+
+While you relish the adventure of discovering a new city - and this is not your first re-location! - you haven't much time to search for the new home you promised yourself and your family. You want more solid and reliable information than the opinions of friends and family! How can you decide which neighborhoods are most suitable for you and your family? 
+
+This project seeks to help you in two ways. First, it provides you with a way to visualize the many neighborhoods, based on what you consider important. Is the neighborhood fairly young? What kinds of people live there? What about the local school district? 
+
+Second, it gives you some insights into housing values in each neighborhood. Why do some neighborhoods have more expensive houses than others? 
+
+
+
+# Part One: Acquiring and Merging Data
+
+## Finding Proper Data
+
+You know you can usually find information for larger units such as metropolitan areas, counties, cities or zip codes, yet you want something more granular. After all, even a zip code can cover a large geographical area! But, where can you find reliable data without spending a fortune?
+
+The Census Bureau's American Community Survey (ACS) collects survey data across the country, asking a variety of questions pertaining to people living in neighborhoods (e.g. age, number, ethnicity) and where they live (e.g. housing/renting, house characteristics). In fact, they offer such data further down than cities, down to census tracts! In such areas as the city of Denver, the ACS boundaries overlap the traditional neighborhoods quite nicely.
+
+The ACS provides five-year average results for the following reasons:
+ - It only collects surveys from a random sample of areas
+ - Census tracts ideally encompass roughly 4,000 people, usually ranging from 1,200 to 8,000 people
+
+The nice thing about the ACS survey is its ability to explore demographics. For this project, you will investigate:
+ - The 'age' of the population (e.g. percentage of population as children or elderly)
+ - The financial status of the population and house owners (e.g. income)
+ - The types of households (e.g. married/single/widowed, income)
+ - Neighborhood housing (i.e. average age of a house, percent owned)
+ - The quality of an area (i.e. state ranking of the public school district)
+
+For each dataset you are teasing out the variables of interest and transforming them into numeric when necessary. You gather the ACS's 2010-2014 five-year estimates, the most recent data available.
+
+The data are available using their American FactFinder tool [here](https://www.census.gov/acs/www/data/data-tables-and-tools/american-factfinder/).
+
+## Using Median House Value (Not Sale Price)
+
+You choose to use the median house value reported in the ACS results. While it might be ideal to use Zillow's [housing and renting data](http://www.zillow.com/research/data) - sale prices, in particular - such data do not track housing statistics in suburban areas. The data can be wonderful if you want to live in downtown Denver, but what if you want to live in Littleton or the Greenwood Village area? Self-reported housing values are not perfect, but they are available. You know this is not perfect, but certainly better than nothing. So, you gather the 2010-2014 estimates as well as the 2010 Census estimates.
+
+Now it's time to put together some data!
+
+```{r message=FALSE, warning=FALSE}
+
+library(maptools)
+library(rgdal)
+library(sp)
+library(ggplot2)
+library(ggmap)
+library(digest)
+library(Hmisc)
+gpclibPermit()
+library(psych)
+library(ggthemes)
+library(plyr)
+library(dplyr)
+library(RColorBrewer)
+library(colorspace)
+
+setwd('C:/Users/John/Denver_Housing_Project/ACS_Data/Final_Data')
+
+# The ACS data include the median self-reported house value, our variable of interest.
+HouseValue_Median_14 <-read.csv('ACS_14_5YR_B25077_DHP.csv', stringsAsFactors = FALSE)
+HouseValue_Median_14 <-select(HouseValue_Median_14, GEO.id2,
+                                 County, HD01_VD01) %>%
+  rename(id=GEO.id2, Median_House_Value=HD01_VD01)
+HouseValue_Median_14 <- mutate(HouseValue_Median_14,
+                                  id=as.character(id),
+                                  County=as.character(County),
+                                  Median_House_Value = as.numeric(Median_House_Value))
+
+
+HouseValue_Median_10 <-read.csv('ACS_10_5YR_B25077_DHP.csv', stringsAsFactors = FALSE)
+HouseValue_Median_10 <-select(HouseValue_Median_10, GEO.id2,
+                                 HD01_VD01) %>%
+  rename(id=GEO.id2, Median_House_Value_2010=HD01_VD01)
+HouseValue_Median_10 <- mutate(HouseValue_Median_10,
+                                  id=as.character(id),
+                                  Median_House_Value_2010 = as.numeric(Median_House_Value_2010))
+
+# Town or neighborhood description
+
+Census2010_Neighborhoods <-read.csv('ACS_2010_Census_Tracts_Neighborhoods.csv', stringsAsFactors=FALSE)
+Census2010_Neighborhoods <-select(Census2010_Neighborhoods, GEO.id2, GEO.display.label,
+                                              Zillow_Name, JR_Name) %>%
+  rename(id=GEO.id2, Geography=GEO.display.label)
+Census2010_Neighborhoods <- mutate(Census2010_Neighborhoods,
+                                  id=as.character(id),
+                                  Geography=as.character(Geography),
+                                  Zillow_Name=as.character(Zillow_Name),
+                                  JR_Name = as.character(JR_Name))
+
+HouseValue_Median_x <-left_join(Census2010_Neighborhoods, HouseValue_Median_14, by=c("id")) 
+HouseValue_Median_14 <-left_join(HouseValue_Median_x, HouseValue_Median_10, by=c("id")) 
+
+HouseValue_Median_14$HouseValue_4YrChange <- round((((HouseValue_Median_14$Median_House_Value/HouseValue_Median_14$Median_House_Value_2010) - 1)*100), digits = 1)
+
+
+# Age and sex variables
+Age_Sex_14 <-read.csv('ACS_14_5YR_S0101_DHP.csv',  stringsAsFactors = FALSE)
+Age_Sex_14 <-select(Age_Sex_14, 
+                            GEO.id2, 
+                            HC01_EST_VC01, HC01_EST_VC07, HC01_EST_VC08,
+                            HC01_EST_VC09, HC01_EST_VC10, HC01_EST_VC11,
+                            HC01_EST_VC12, HC01_EST_VC13, HC01_EST_VC14,
+                            HC01_EST_VC15, HC01_EST_VC16, HC01_EST_VC28, 
+                            HC01_EST_VC31, HC01_EST_VC35, HC02_EST_VC35, 
+                            HC03_EST_VC35) %>%
+  rename(id=GEO.id2, 
+              TotalPop=HC01_EST_VC01,
+              Perc_20to24=HC01_EST_VC07,
+              Perc_25to29=HC01_EST_VC08,
+              Perc_30to34=HC01_EST_VC09,
+              Perc_35to39=HC01_EST_VC10,
+              Perc_40to44=HC01_EST_VC11,
+              Perc_45to49=HC01_EST_VC12,
+              Perc_50to54=HC01_EST_VC13,
+              Perc_55to59=HC01_EST_VC14,
+              Perc_60to64=HC01_EST_VC15,
+              Perc_65to69=HC01_EST_VC16,
+              Perc_18Plus=HC01_EST_VC28,
+              Perc_65Plus=HC01_EST_VC31,
+              MedianAge=HC01_EST_VC35,
+              MedianAge_Male=HC02_EST_VC35,
+              MedianAge_Female=HC03_EST_VC35)
+
+Age_Sex_14 <- mutate(Age_Sex_14,
+                          id=as.character(id),
+                          TotalPop=as.numeric(TotalPop),
+                          Perc_20to24=as.numeric(Perc_20to24),
+                          Perc_25to29=as.numeric(Perc_25to29),
+                          Perc_30to34=as.numeric(Perc_30to34),
+                          Perc_35to39=as.numeric(Perc_35to39),
+                          Perc_40to44=as.numeric(Perc_40to44),
+                          Perc_45to49=as.numeric(Perc_45to49),
+                          Perc_50to54=as.numeric(Perc_50to54),
+                          Perc_55to59=as.numeric(Perc_55to59),
+                          Perc_60to64=as.numeric(Perc_60to64),
+                          Perc_65to69=as.numeric(Perc_65to69),
+                          Perc_18Plus=as.numeric(Perc_18Plus),
+                          Perc_65Plus=as.numeric(Perc_65Plus),
+                          MedianAge=as.numeric(MedianAge),
+                          MedianAge_Male=as.numeric(MedianAge_Male),
+                          MedianAge_Female=as.numeric(MedianAge_Female))
+
+Age_Sex_14$Perc_Under18 <- 100 - (Age_Sex_14$Perc_18Plus)
+Age_Sex_14$Perc_20to29 <- (Age_Sex_14$Perc_20to24 + Age_Sex_14$Perc_25to29)
+Age_Sex_14$Perc_30to39 <- (Age_Sex_14$Perc_30to34 + Age_Sex_14$Perc_35to39)
+Age_Sex_14$Perc_40to49 <- (Age_Sex_14$Perc_40to44 + Age_Sex_14$Perc_45to49)
+Age_Sex_14$Perc_50to59 <- (Age_Sex_14$Perc_50to54 + Age_Sex_14$Perc_55to59)
+Age_Sex_14$Perc_60to69 <- (Age_Sex_14$Perc_60to64 + Age_Sex_14$Perc_65to69)
+
+
+```
+
+### Income
+Since you are curious to discover the potential effects of income on housing values, you have collected individual and household income data. You are curious to know whether there is some kind of 'middle class' effect within the data. Based on an [article in Business Insider](http://www.businessinsider.com/middle-class-in-every-us-state-2015-4), you define middle class household income in Colorado at $35k to $100k (the closest approximations to make given the Census survey categories). 
+
+
+```{r warning=FALSE}
+
+# Financials - S2503
+FinChars_14 <-read.csv('ACS_14_5YR_S2503_DHP.csv',  stringsAsFactors = FALSE)
+FinChars_14 <-select(FinChars_14, 
+                            GEO.id2, 
+                            HC01_EST_VC01, HC02_EST_VC01, HC01_EST_VC03,
+                            HC02_EST_VC03, HC01_EST_VC04, HC02_EST_VC04,
+                            HC01_EST_VC05, HC02_EST_VC05, HC01_EST_VC06,
+                            HC02_EST_VC06, HC01_EST_VC07, HC02_EST_VC07,
+                            HC01_EST_VC08, HC02_EST_VC08, HC01_EST_VC09,
+                            HC02_EST_VC09, HC01_EST_VC10, HC02_EST_VC10,
+                            HC01_EST_VC11, HC02_EST_VC11, HC01_EST_VC12,
+                            HC02_EST_VC12, HC01_EST_VC13, HC02_EST_VC13) %>%
+  rename(id=GEO.id2, 
+          Houses_Total=HC01_EST_VC01,
+          Houses_Owner=HC02_EST_VC01,
+          HHInc12Mos_PercUnder5K=HC01_EST_VC03,
+          HHInc12Mos_PercUnder5K_Owner=HC02_EST_VC03,
+          HHInc12Mos_Perc5to9K=HC01_EST_VC04,
+          HHInc12Mos_Perc5to9K_Owner=HC02_EST_VC04,
+          HHInc12Mos_Perc10to14K=HC01_EST_VC05,
+          HHInc12Mos_Perc10to14K_Owner=HC02_EST_VC05,
+          HHInc12Mos_Perc15to20K=HC01_EST_VC06,
+          HHInc12Mos_Perc15to20K_Owner=HC02_EST_VC06,
+          HHInc12Mos_Perc20to25K=HC01_EST_VC07,
+          HHInc12Mos_Perc20to25K_Owner=HC02_EST_VC07,
+          HHInc12Mos_Perc25to35K=HC01_EST_VC08,
+          HHInc12Mos_Perc25to35K_Owner=HC02_EST_VC08,
+          HHInc12Mos_Perc35to50K=HC01_EST_VC09,
+          HHInc12Mos_Perc35to50K_Owner=HC02_EST_VC09,
+          HHInc12Mos_Perc50to75K=HC01_EST_VC10,
+          HHInc12Mos_Perc50to75K_Owner=HC02_EST_VC10,
+          HHInc12Mos_Perc75to100K=HC01_EST_VC11,
+          HHInc12Mos_Perc75to100K_Owner=HC02_EST_VC11,
+          HHInc12Mos_Perc100to150K=HC01_EST_VC12,
+          HHInc12Mos_Perc100to150K_Owner=HC02_EST_VC12,
+          HHInc12Mos_Perc150KPlus=HC01_EST_VC13,
+          HHInc12Mos_Perc150KPlus_Owner=HC02_EST_VC13)
+
+
+FinChars_14 <- mutate(FinChars_14, 
+                                     id=as.character(id),
+                          Houses_Total=as.numeric(Houses_Total),
+                          Houses_Owner=as.numeric(Houses_Owner),
+                          HHInc12Mos_PercUnder5K=as.numeric(HHInc12Mos_PercUnder5K),
+                          HHInc12Mos_PercUnder5K_Owner=as.numeric(HHInc12Mos_PercUnder5K_Owner),
+                          HHInc12Mos_Perc5to9K=as.numeric(HHInc12Mos_Perc5to9K),
+                          HHInc12Mos_Perc5to9K_Owner=as.numeric(HHInc12Mos_Perc5to9K_Owner),
+                          HHInc12Mos_Perc10to14K=as.numeric(HHInc12Mos_Perc10to14K),
+                          HHInc12Mos_Perc10to14K_Owner=as.numeric(HHInc12Mos_Perc10to14K_Owner),
+                          HHInc12Mos_Perc15to20K=as.numeric(HHInc12Mos_Perc15to20K),
+                          HHInc12Mos_Perc15to20K_Owner=as.numeric(HHInc12Mos_Perc15to20K_Owner),
+                          HHInc12Mos_Perc20to25K=as.numeric(HHInc12Mos_Perc20to25K),
+                          HHInc12Mos_Perc20to25K_Owner=as.numeric(HHInc12Mos_Perc20to25K_Owner),
+                          HHInc12Mos_Perc25to35K=as.numeric(HHInc12Mos_Perc25to35K),
+                          HHInc12Mos_Perc25to35K_Owner=as.numeric(HHInc12Mos_Perc25to35K_Owner),
+                          HHInc12Mos_Perc35to50K=as.numeric(HHInc12Mos_Perc35to50K),
+                          HHInc12Mos_Perc35to50K_Owner=as.numeric(HHInc12Mos_Perc35to50K_Owner),
+                          HHInc12Mos_Perc50to75K=as.numeric(HHInc12Mos_Perc50to75K),
+                          HHInc12Mos_Perc50to75K_Owner=as.numeric(HHInc12Mos_Perc50to75K_Owner),
+                          HHInc12Mos_Perc75to100K=as.numeric(HHInc12Mos_Perc75to100K),
+                          HHInc12Mos_Perc75to100K_Owner=as.numeric(HHInc12Mos_Perc75to100K_Owner),
+                          HHInc12Mos_Perc100to150K=as.numeric(HHInc12Mos_Perc100to150K),
+                          HHInc12Mos_Perc100to150K_Owner=as.numeric(HHInc12Mos_Perc100to150K_Owner),
+                          HHInc12Mos_Perc150KPlus=as.numeric(HHInc12Mos_Perc150KPlus),
+                          HHInc12Mos_Perc150KPlus_Owner=as.numeric(HHInc12Mos_Perc150KPlus_Owner))
+
+
+
+FinChars_14$HHInc12Mos_Perc35KandBelow <- (FinChars_14$HHInc12Mos_PercUnder5K + 
+                                              FinChars_14$HHInc12Mos_Perc5to9K + 
+                                              FinChars_14$HHInc12Mos_Perc10to14K + 
+                                              FinChars_14$HHInc12Mos_Perc15to20K + 
+                                              FinChars_14$HHInc12Mos_Perc20to25K +
+                                              FinChars_14$HHInc12Mos_Perc25to35K)
+
+FinChars_14$HHInc12Mos_Owner_Perc35KandBelow <- (FinChars_14$HHInc12Mos_PercUnder5K_Owner + 
+                                                    FinChars_14$HHInc12Mos_Perc5to9K_Owner + 
+                                                    FinChars_14$HHInc12Mos_Perc10to14K_Owner + 
+                                                    FinChars_14$HHInc12Mos_Perc15to20K_Owner + 
+                                                    FinChars_14$HHInc12Mos_Perc20to25K_Owner +
+                                                    FinChars_14$HHInc12Mos_Perc25to35K_Owner)
+
+
+FinChars_14$HHInc12Mos_Perc35Kto100K<-(FinChars_14$HHInc12Mos_Perc35to50K + 
+                                       FinChars_14$HHInc12Mos_Perc50to75K +
+                                       FinChars_14$HHInc12Mos_Perc75to100K)
+                                             
+FinChars_14$HHInc12Mos_Owner_Perc35Kto100K<-(FinChars_14$HHInc12Mos_Perc35to50K_Owner + 
+                                             FinChars_14$HHInc12Mos_Perc50to75K_Owner +
+                                             FinChars_14$HHInc12Mos_Perc75to100K_Owner)
+  
+FinChars_14$HHInc12Mos_Perc100KandAbove <-(FinChars_14$HHInc12Mos_Perc100to150K + 
+                                           FinChars_14$HHInc12Mos_Perc150KPlus)
+
+FinChars_14$HHInc12Mos_Owner_Perc100KandAbove <-(FinChars_14$HHInc12Mos_Perc100to150K_Owner + 
+                                                 FinChars_14$HHInc12Mos_Perc150KPlus_Owner)
+
+```
+
+### Education and Marital Status
+
+Given the historic importance of socioeconomic factors versus the rising trend of non-married families, you are also curious to see whether marital status has some effect on neighborhood housing values. 
+
+You also add some indicators for education, from high school dropouts (no high school diploma) to people with advanced degrees. If it is true that people with higher education earn more, then there should be a correlation there.
+
+### Property Types
+
+Also, is it true that neighborhood housing values are due to the size and types of properties? You include a measure of the size of the structure (the total number of units). You also add a measure of the percentage of places rented (versus owned), as a way to explore whether renting has a way of depressing housing values.
+
+
+```{r warning=FALSE}
+
+# Percent married couple family households
+HHnFams_14 <-read.csv('ACS_14_5YR_S1101_DHP.csv', stringsAsFactors = FALSE)
+HHnFams_14 <-select(HHnFams_14, GEO.id2, 
+                                HC01_EST_VC02, HC02_EST_VC02, HC05_EST_VC02,
+                                HC01_EST_VC03, HC02_EST_VC03, 
+                                HC01_EST_VC06, HC02_EST_VC06, 
+                                HC01_EST_VC07, HC02_EST_VC07, 
+                                HC01_EST_VC15, HC02_EST_VC15, HC05_EST_VC15,
+                                HC01_EST_VC27, HC02_EST_VC27, HC05_EST_VC27,
+                                HC01_EST_VC28, HC02_EST_VC28, HC05_EST_VC28,
+                                HC01_EST_VC29, HC02_EST_VC29, HC05_EST_VC29) %>%
+  rename(id=GEO.id2, 
+          TotalHHs=HC01_EST_VC02,
+          TotalHHs_MarriedCoupleFamily=HC02_EST_VC02,
+          TotalHHs_Nonfamily=HC05_EST_VC02,
+          HHs_AvgSize=HC01_EST_VC03,
+          HHs_AvgSize_MarriedCoupleFamily=HC02_EST_VC03,
+          HHs_TotalFamilies=HC01_EST_VC06,
+          HHs_TotalFamilies_MarriedCoupleFamily=HC02_EST_VC06,
+          HHs_AvgFamilySize=HC01_EST_VC07,
+          HHs_AvgFamilySize_MarriedCoupleFamily=HC02_EST_VC07,
+          HHs_Total=HC01_EST_VC15,
+          HHs_Total_MarriedCoupleFamily=HC02_EST_VC15,
+          HHs_Total_Nonfamily=HC05_EST_VC15,
+          HHs_Total_PercOneUnitStructure=HC01_EST_VC27,
+          HHs_Total_UnitsinStructure_MarriedCoupleFamily_Perc_OneUnitStructure=HC02_EST_VC27,
+          HHs_Total_UnitsinStructure_Nonfamily_Perc_OneUnitStructure=HC05_EST_VC27,
+          HHs_Total_UnitsinStructure_PercTwoPlusUnitStructure=HC01_EST_VC28,
+          HHs_Total_UnitsinStructure_MarriedCoupleFamily_Perc_TwoPlusUnitStructure=HC02_EST_VC28,
+          HHs_Total_UnitsinStructure_Nonfamily_Perc_TwoPlusUnitStructure=HC05_EST_VC28,
+          HHs_Total_UnitsinStructure_PercMobileHomeandSimilar=HC01_EST_VC29,
+          HHs_Total_UnitsinStructure_MarriedCoupleFamily_Perc_MobileHomeandSimilar=HC02_EST_VC29,
+          HHs_Total_UnitsinStructure_Nonfamily_Perc_MobileHomeandSimilar=HC05_EST_VC29)
+
+HHnFams_14 <- mutate(HHnFams_14,
+                      id=as.character(id),
+                      TotalHHs=as.numeric(TotalHHs),
+                      TotalHHs_MarriedCoupleFamily=as.numeric(TotalHHs_MarriedCoupleFamily),
+                      TotalHHs_Nonfamily=as.numeric(TotalHHs_Nonfamily),
+                      HHs_AvgSize=as.numeric(HHs_AvgSize),
+                      HHs_AvgSize_MarriedCoupleFamily=as.numeric(HHs_AvgSize_MarriedCoupleFamily),
+                      HHs_TotalFamilies=as.numeric(HHs_TotalFamilies),
+                      HHs_TotalFamilies_MarriedCoupleFamily=as.numeric(HHs_TotalFamilies_MarriedCoupleFamily),
+                      HHs_AvgFamilySize=as.numeric(HHs_AvgFamilySize),
+                      HHs_AvgFamilySize_MarriedCoupleFamily=as.numeric(HHs_AvgFamilySize_MarriedCoupleFamily),
+                      HHs_Total=as.numeric(HHs_Total),
+                      HHs_Total_MarriedCoupleFamily=as.numeric(HHs_Total_MarriedCoupleFamily),
+                      HHs_Total_Nonfamily=as.numeric(HHs_Total_Nonfamily),
+                      HHs_Total_PercOneUnitStructure=as.numeric(HHs_Total_PercOneUnitStructure),
+                      HHs_Total_UnitsinStructure_MarriedCoupleFamily_Perc_OneUnitStructure=as.numeric(HHs_Total_UnitsinStructure_MarriedCoupleFamily_Perc_OneUnitStructure),
+                      HHs_Total_UnitsinStructure_Nonfamily_Perc_OneUnitStructure=as.numeric(HHs_Total_UnitsinStructure_Nonfamily_Perc_OneUnitStructure),
+                      HHs_Total_UnitsinStructure_PercTwoPlusUnitStructure=as.numeric(HHs_Total_UnitsinStructure_PercTwoPlusUnitStructure),
+                      HHs_Total_UnitsinStructure_MarriedCoupleFamily_Perc_TwoPlusUnitStructure=as.numeric(HHs_Total_UnitsinStructure_MarriedCoupleFamily_Perc_TwoPlusUnitStructure),
+                      HHs_Total_UnitsinStructure_Nonfamily_Perc_TwoPlusUnitStructure=as.numeric(HHs_Total_UnitsinStructure_Nonfamily_Perc_TwoPlusUnitStructure),
+                      HHs_Total_UnitsinStructure_PercMobileHomeandSimilar=as.numeric(HHs_Total_UnitsinStructure_PercMobileHomeandSimilar),
+                      HHs_Total_UnitsinStructure_MarriedCoupleFamily_Perc_MobileHomeandSimilar=as.numeric(HHs_Total_UnitsinStructure_MarriedCoupleFamily_Perc_MobileHomeandSimilar),
+                      HHs_Total_UnitsinStructure_Nonfamily_Perc_MobileHomeandSimilar=as.numeric(HHs_Total_UnitsinStructure_Nonfamily_Perc_MobileHomeandSimilar))
+
+
+HHnFams_14$HHs_Perc_MarriedCoupleFamilyOnly <-round(((HHnFams_14$TotalHHs_MarriedCoupleFamily/HHnFams_14$TotalHHs) * 100), digits = 1)
+
+
+# Selected characteristics
+
+SCs_14<-read.csv('ACS_14_5YR_S0601_DHP.csv',  stringsAsFactors = FALSE)
+SCs_14 <-select(SCs_14, GEO.id2, 
+                        HC01_EST_VC01, HC01_EST_VC12, HC01_EST_VC38,
+                        HC01_EST_VC39, HC01_EST_VC40, HC01_EST_VC41,
+                        HC01_EST_VC42, HC01_EST_VC45, HC01_EST_VC46,
+                        HC01_EST_VC47, HC01_EST_VC48, HC01_EST_VC49,
+                        HC01_EST_VC50, HC01_EST_VC53, HC01_EST_VC54,
+                        HC01_EST_VC55, HC01_EST_VC56, HC01_EST_VC57, 
+                        HC01_EST_VC58, HC01_EST_VC59, HC01_EST_VC60,
+                        HC01_EST_VC61, HC01_EST_VC63, HC01_EST_VC66,
+                        HC01_EST_VC67, HC01_EST_VC68) %>%
+  rename(id=GEO.id2, 
+          SCs_TotalPop=HC01_EST_VC01,
+          SCs_MedianAge=HC01_EST_VC12,
+          SCs_Marital_15YearsPlus_Total=HC01_EST_VC38,
+          SCs_Marital_Perc_NeverMarried=HC01_EST_VC39,
+          SCs_Marital_Perc_MarriedNotSeparated=HC01_EST_VC40, 
+          SCs_Marital_Perc_DivorcedorSeparated=HC01_EST_VC41,
+          SCs_Marital_Perc_Widowed=HC01_EST_VC42,
+          SCs_EducationLevel_Total=HC01_EST_VC45,
+          SCs_PercNotHSGrad=HC01_EST_VC46,
+          SCs_PercHSGradOnly=HC01_EST_VC47,
+          SCs_PercSomeCollegetoAA=HC01_EST_VC48,
+          SCs_PercBADegreeOnly=HC01_EST_VC49,
+          SCs_PercGradorProfDegree=HC01_EST_VC50,
+          SCs_IndIncome_Total=HC01_EST_VC53,
+          SCs_IndIncome_Perc1to10KorLess=HC01_EST_VC54,
+          SCs_IndIncome_Perc10to15K=HC01_EST_VC55,
+          SCs_IndIncome_Perc15to25K=HC01_EST_VC56,
+          SCs_IndIncome_Perc25to35K=HC01_EST_VC57,
+          SCs_IndIncome_Perc35to50K=HC01_EST_VC58,
+          SCs_IndIncome_Perc50to65K=HC01_EST_VC59,
+          SCs_IndIncome_Perc65to75K=HC01_EST_VC60,
+          SCs_IndIncome_Perc75KPlus=HC01_EST_VC61,
+          SCs_IndIncome_MedianIncome=HC01_EST_VC63,
+          SCs_PovertyStatus_TotalPop=HC01_EST_VC66,
+          SCs_PercBelow100PercPoverty=HC01_EST_VC67,
+          SCs_Perc100to150PercPoverty=HC01_EST_VC68)
+
+SCs_14 <- mutate(SCs_14, id=as.character(id),
+                          SCs_TotalPop=as.numeric(SCs_TotalPop),
+                          SCs_MedianAge=as.numeric(SCs_MedianAge),
+                          SCs_Marital_15YearsPlus_Total=as.numeric(SCs_Marital_15YearsPlus_Total),
+                          SCs_Marital_Perc_NeverMarried=as.numeric(SCs_Marital_Perc_NeverMarried),
+                          SCs_Marital_Perc_MarriedNotSeparated=as.numeric(SCs_Marital_Perc_MarriedNotSeparated),
+                          SCs_Marital_Perc_DivorcedorSeparated=as.numeric(SCs_Marital_Perc_DivorcedorSeparated),
+                          SCs_Marital_Perc_Widowed=as.numeric(SCs_Marital_Perc_Widowed),
+                          SCs_EducationLevel_Total=as.numeric(SCs_EducationLevel_Total),
+                          SCs_PercNotHSGrad=as.numeric(SCs_PercNotHSGrad),
+                          SCs_PercHSGradOnly=as.numeric(SCs_PercHSGradOnly),
+                          SCs_PercSomeCollegetoAA=as.numeric(SCs_PercSomeCollegetoAA),
+                          SCs_PercBADegreeOnly=as.numeric(SCs_PercBADegreeOnly),
+                          SCs_PercGradorProfDegree=as.numeric(SCs_PercGradorProfDegree),
+                          SCs_IndIncome_Total=as.numeric(SCs_IndIncome_Total),
+                          SCs_IndIncome_Perc1to10KorLess=as.numeric(SCs_IndIncome_Perc1to10KorLess),
+                          SCs_IndIncome_Perc10to15K=as.numeric(SCs_IndIncome_Perc10to15K),
+                          SCs_IndIncome_Perc15to25K=as.numeric(SCs_IndIncome_Perc15to25K),
+                          SCs_IndIncome_Perc25to35K=as.numeric(SCs_IndIncome_Perc25to35K),
+                          SCs_IndIncome_Perc35to50K=as.numeric(SCs_IndIncome_Perc35to50K),
+                          SCs_IndIncome_Perc50to65K=as.numeric(SCs_IndIncome_Perc50to65K),
+                          SCs_IndIncome_Perc65to75K=as.numeric(SCs_IndIncome_Perc65to75K),
+                          SCs_IndIncome_Perc75KPlus=as.numeric(SCs_IndIncome_Perc75KPlus),
+                          SCs_IndIncome_MedianIncome=as.numeric(SCs_IndIncome_MedianIncome),
+                          SCs_PovertyStatus_TotalPop=as.numeric(SCs_PovertyStatus_TotalPop),
+                          SCs_PercBelow100PercPoverty=as.numeric(SCs_PercBelow100PercPoverty),
+                          SCs_Perc100to150PercPoverty=as.numeric(SCs_Perc100to150PercPoverty))
+
+
+SCs_14$SCs_IndIncome_PercTotal <- SCs_14$SCs_IndIncome_Perc1to10KorLess +
+          SCs_14$SCs_IndIncome_Perc10to15K +
+          SCs_14$SCs_IndIncome_Perc15to25K +  
+          SCs_14$SCs_IndIncome_Perc25to35K +
+          SCs_14$SCs_IndIncome_Perc35to50K +
+          SCs_14$SCs_IndIncome_Perc50to65K +
+          SCs_14$SCs_IndIncome_Perc65to75K +
+          SCs_14$SCs_IndIncome_Perc75KPlus
+          
+
+SCs_14$SCs_PercAtLeastHSGrad <-SCs_14$SCs_PercHSGrad + 
+          SCs_14$SCs_PercSomeCollegetoAA + 
+          SCs_14$SCs_PercBADegreeOnly + 
+          SCs_14$SCs_PercGradorProfDegree
+
+SCs_14$SCs_PercAtLeastBADegree <- SCs_14$SCs_PercBADegreeOnly + 
+          SCs_14$SCs_PercGradorProfDegree
+
+SCs_14$SCs_IndIncome_PercUpto25K <- SCs_14$SCs_IndIncome_Perc1to10KorLess + 
+          SCs_14$SCs_IndIncome_Perc10to15K +
+          SCs_14$SCs_IndIncome_Perc15to25K
+
+SCs_14$SCs_IndIncome_Perc25Kto75K <- SCs_14$SCs_IndIncome_Perc25to35K +
+          SCs_14$SCs_IndIncome_Perc35to50K +
+          SCs_14$SCs_IndIncome_Perc50to65K +
+          SCs_14$SCs_IndIncome_Perc65to75K
+
+SCs_14$SCs_PercUpto150PercentPovertyLevel <-SCs_14$SCs_PercBelow100PercPoverty + 
+          SCs_14$SCs_Perc100to150PercPoverty
+
+
+# Median year built
+MedianHouseYr_14 <-read.csv('ACS_14_5YR_B25035_DHP.csv', stringsAsFactors = FALSE)
+MedianHouseYr_14 <-select(MedianHouseYr_14, GEO.id2, HD01_VD01) %>%
+  rename(id=GEO.id2, House_MedianYearBuilt=HD01_VD01)
+MedianHouseYr_14 <- mutate(MedianHouseYr_14, id=as.character(id),
+                     House_MedianYearBuilt=as.numeric(House_MedianYearBuilt))
+
+
+# Percent vacant
+OSH_14 <-read.csv('ACS_14_5YR_B25002_DHP.csv', stringsAsFactors = FALSE, header=TRUE)
+OSH_14 <-select(OSH_14, GEO.id2, 
+           HD01_VD01, HD01_VD03) %>%
+  rename(id=GEO.id2,
+         HousingUnits_Total=HD01_VD01,
+         HousingUnits_Vacant=HD01_VD03)
+OSH_14 <- mutate(OSH_14, id=as.character(id),
+                         HousingUnits_Total=as.numeric(HousingUnits_Total),
+                         HousingUnits_Vacant=as.numeric(HousingUnits_Vacant))
+
+OSH_14$HousingUnits_Perc_Vacant <- round(((OSH_14$HousingUnits_Vacant/OSH_14$HousingUnits_Total) * 100), digits = 1)
+
+
+# Percent owned, and renting
+TvRO_14 <-read.csv('ACS_14_5YR_B25003_DHP.csv', stringsAsFactors = FALSE)
+TvRO_14 <-select(TvRO_14, GEO.id2, 
+                        HD01_VD01, HD01_VD02, HD01_VD03) %>%
+  rename(id=GEO.id2, 
+         TvRO_Total=HD01_VD01,
+         TvRO_Owner=HD01_VD02,
+         TvRO_Renter=HD01_VD03)
+
+TvRO_14 <- mutate(TvRO_14, id=as.character(id),
+                            TvRO_Total=as.numeric(TvRO_Total),
+                            TvRO_Owner=as.numeric(TvRO_Owner),
+                            TvRO_Renter=as.numeric(TvRO_Renter))
+
+TvRO_14$TvRO_Perc_Owner <- round(((TvRO_14$TvRO_Owner/TvRO_14$TvRO_Total) * 100), digits = 1)
+TvRO_14$TvRO_Perc_Renter <- TvRO_14$TvRO_Renter/TvRO_14$TvRO_Total * 100
+
+
+```
+
+### The Impact of Working
+
+Given the economic difficulties of the Great Recession, you want to explore the impact of unemployment. With this in mind, you include a more subtle version: the average number of hours worked.
+
+
+```{r warning=FALSE}
+# Mean hours worked past 12 months
+
+WorkPast12Mos_14 <-read.csv('ACS_14_5YR_S2303_DHP.csv', stringsAsFactors = FALSE)
+WorkPast12Mos_14 <-select(WorkPast12Mos_14, GEO.id2, HC01_EST_VC22) %>%
+  rename(id=GEO.id2, MeanHrsWorked=HC01_EST_VC22)
+WorkPast12Mos_14 <- mutate(WorkPast12Mos_14, id=as.character(id),
+                                              MeanHrsWorked=as.numeric(MeanHrsWorked))
+
+```
+### The Impact of School Education
+
+When you chatted with people about the reasons why they chose a certain neighborhood, the quality of education often entered the conversation. As noted [here](http://www.citylab.com/housing/2014/08/where-private-school-enrollment-is-highest-and-lowest-across-the-us/375993), 'More than two-thirds of adults with children under 12 say that the neighborhood school district is among the most important considerations when choosing a home, according to a June 2013 Trulia survey.'
+
+So, you want to discover a potential link between a school district's ranking and housing. 
+
+In order to do this, you found a website - [schooldigger.com](www.schooldigger.com) - that uses Colorado Department of Education test scores to create state-level rankings of each public school district. (You can find further information [here](http://www.schooldigger.com/aboutranking.aspx). ) While it might be optimal to collect and map data on individual schools - including private schools - you discover this too time-consuming for you to handle. For those neighborhoods with more than one school district present, you visualize the boundaries, assign an approximate percentage of territory for each district, and use that to calculate the rank.
+
+
+```{r warning=FALSE}
+SchlDistStateRank_1213 <-read.csv('School_District_Rankings_1213.csv', stringsAsFactors = FALSE)
+SchlDistStateRank_1213 <-select(SchlDistStateRank_1213, GEO.id2,
+                                       Schl_Dist_Rank_2012_13, Schl_Dist_Rank_2011_12) %>%
+  rename(id=GEO.id2, 
+         Same_School_Year_Ranking=Schl_Dist_Rank_2012_13,
+         Last_School_Year_Ranking=Schl_Dist_Rank_2011_12)
+SchlDistStateRank_1213 <- mutate(SchlDistStateRank_1213, id=as.character(id),
+                                  Same_School_Year_Ranking=as.numeric(Same_School_Year_Ranking),
+                                  Last_School_Year_Ranking=as.numeric(Last_School_Year_Ranking))
+```
+
+# Joining files
+
+Now that we have our datasets in shape, we can join them together!
+
+```{r}
+
+ACSData1_14<-left_join(HouseValue_Median_14, Age_Sex_14, by=c("id")) 
+ACSData2_14<-left_join(ACSData1_14, FinChars_14, by=c("id")) 
+ACSData3_14<-left_join(ACSData2_14, HHnFams_14, by=c("id")) 
+ACSData4_14<-left_join(ACSData3_14, SCs_14, by=c("id")) 
+ACSData5_14<-left_join(ACSData4_14, MedianHouseYr_14, by=c("id")) 
+ACSData6_14<-left_join(ACSData5_14, OSH_14, by=c("id")) 
+ACSData7_14<-left_join(ACSData6_14, TvRO_14, by=c("id")) 
+ACSData8_14<-left_join(ACSData7_14, WorkPast12Mos_14, by=c("id")) 
+ACSData9_14<-left_join(ACSData8_14, SchlDistStateRank_1213, by=c("id")) 
+
+save(ACSData9_14, file = "ACSData9_14.RData")
+
+```
+
+And, we have our merged dataset!
