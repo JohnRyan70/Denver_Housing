@@ -1,6 +1,7 @@
-# The Denver Housing Market: or, Where Should I Move?
+# The Denver Housing Market: or, Where Should I Move? 
+# John Francis Ryan, Ph.D. (jfryan70@gmail.com)
 
-This project is designed to assess the Denver housing market, at the neighborhood level, during 2014 (the most recent year available for relevant data). In particular, it highlights the highs and lows as well as analyzes the most influential factors upon housing values within the five-county area. By integrating the Census Bureau's American Community Survey and a separate source to assess school district quality, and using LASSO regression to reduce the effects of collinearity, the results provide a complex picture of the housing market.
+This project is designed to assess the Denver housing market, at the neighborhood level, during 2014 (the most recent year available for relevant data). In particular, it highlights the highs and lows as well as analyzes the most influential factors upon housing values within the five-county area. By integrating the Census Bureau's American Community Survey and a separate source to assess school district quality, and using LASSO regression to reduce the effects of collinearity, the results provide a complex picture of the housing market. Actual RPubs versions of each stage are available upon request.
 
 # Part One: AcquiredData
 This part of the project collects and integrates the various Census and other datasets into one initial dataset, ACSData9_14.
